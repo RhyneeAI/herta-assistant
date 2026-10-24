@@ -5,6 +5,11 @@ Converts base TTS audio into authentic Yamazaki Haruka (山崎はるか / Herta)
 
 import os
 import sys
+import warnings
+
+# Suppress PyTorch internal deprecation notices
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 from herta.config import TMP_DIR, load_config
 

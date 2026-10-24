@@ -4,6 +4,11 @@ Command-Line Interface (CLI) entrypoint for Madam Herta Assistant.
 
 import argparse
 import sys
+import warnings
+
+# Suppress PyTorch future deprecation notices for cleaner terminal display
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 from herta.chat import start_chat
 from herta.config import CONFIG_FILE, load_config, save_config
