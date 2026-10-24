@@ -80,6 +80,24 @@ NoDisplay=false
 X-GNOME-Autostart-enabled=true
 EOF
 
+# 6. Optional Initial Configuration (Partner Name & Gemini API Key)
+echo ""
+echo "======================================================================"
+echo "⚙️   INITIAL CONFIGURATION (OPTIONAL)"
+echo "======================================================================"
+echo "Press [Enter] to keep defaults, or customize your initial settings:"
+echo ""
+
+read -r -p "Partner name / title Madam Herta uses to address you (Default: あなた): " input_name
+if [ -n "$input_name" ]; then
+    "$VENV_DIR/bin/python3" -m herta.cli config --name "$input_name"
+fi
+
+read -r -p "Google Gemini API Key (Optional - press [Enter] to skip): " input_key
+if [ -n "$input_key" ]; then
+    "$VENV_DIR/bin/python3" -m herta.cli config --key "$input_key"
+fi
+
 echo ""
 echo "======================================================================"
 echo "✨ Installation Complete!"

@@ -30,73 +30,74 @@ Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎は
 
 ## 📋 Requirements & Prerequisites
 
-Sebelum menginstall, pastikan sistem Anda memenuhi persyaratan berikut:
+Before installing, ensure your environment meets the following requirements:
 
 ### 1. Python Environment
-* **Versi Python**: Python `>= 3.10` (Disarankan **Python 3.10 – 3.12** untuk kompatibilitas penuh RVC v2 voice conversion, atau **Python 3.10 – 3.14+** untuk mode standar Edge-TTS & Desktop GUI).
-* **PATH**: Pastikan Python dicentang *"Add python.exe to PATH"* saat instalasi Windows.
+* **Python Version**: Python `>= 3.10` (Recommended: **Python 3.10 – 3.12** for full local RVC v2 neural voice conversion compatibility, or **Python 3.10 – 3.14+** for standard Edge-TTS Japanese voice & Desktop GUI).
+* **System PATH**: Ensure *"Add python.exe to PATH"* is checked when installing Python on Windows.
 
 ### 2. Python Packages
-Dependencies dibagi menjadi dua kelompok:
-* **Core & GUI (Wajib)** — Ringan, langsung jalan di semua platform:
+Dependencies are separated into two tiers:
+* **Core & Desktop GUI (Required)** — Lightweight and runs out of the box across all platforms:
   * `PyQt6` (Desktop Mascot & System Tray UI)
-  * `Pillow` (Animasi GIF Herta & rendering grafis)
-  * `edge-tts` (Sintesis suara bahasa Jepang real-time)
-  * `soundfile` & `numpy` (Playback audio & manipulasi waveform)
-  * `requests` (Konektivitas Gemini API)
-* **RVC Neural Voice Weights (Opsional)** — Untuk kloning suara Yamazaki Haruka v2:
+  * `Pillow` (Herta GIF animations & transparent sprite rendering)
+  * `edge-tts` (Real-time Japanese voice synthesis)
+  * `soundfile` & `numpy` (Audio playback & waveform processing)
+  * `requests` (Gemini API communication)
+* **RVC Neural Voice Conversion (Optional)** — Authentic Yamazaki Haruka RVC v2 inference:
   * `torch`, `torchaudio`, `torchcrepe`, `transformers`, `praat-parselmouth`, `infer-rvc-python`, `faiss-cpu`, `scipy`, `librosa`.
-  * *Catatan:* Jika RVC tidak diinstall, Madam Herta secara otomatis beralih (*graceful fallback*) ke suara Edge-TTS Jepang (`ja-JP-NanamiNeural`) yang tetap sangat natural dan responsif tanpa lag.
+  * *Note:* If RVC packages are omitted or fail to compile on your system, Madam Herta automatically engages a *graceful fallback* to the high-clarity Japanese Edge-TTS voice (`ja-JP-NanamiNeural`) with zero lag.
 
-### 3. System Tools (Opsional / Disarankan)
-* **Windows**: `ffmpeg` (disarankan untuk konversi audio), Visual C++ Build Tools (hanya jika ingin build package C/Cython seperti `pyworld`).
+### 3. System Tools (Recommended)
+* **Windows**: `ffmpeg` (recommended for general audio conversions), Visual C++ Build Tools (only if compiling native Cython packages like `pyworld`).
 * **Linux**: `ffmpeg`, `libasound2-dev`, `python3-venv`, `notify-send`.
 
 ---
 
-## 🚀 Quick Installation
+## 🚀 Installation Guide
 
-### Opsi 1: Otomatis (Rekomendasi)
+### Option 1: Automated Installer (Recommended)
 
-#### 🔹 Pada Windows (10 / 11):
-1. Buka PowerShell dan arahkan ke folder project.
-2. Jalankan installer:
+#### 🔹 On Windows (10 / 11):
+1. Open PowerShell and navigate to the project directory.
+2. Run the installer script:
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\scripts\install.ps1
 ```
-*(Atau cukup double-click `scripts\install.bat`)*
+*(Alternatively, simply double-click `scripts\install.bat`)*
 
-Installer akan otomatis:
-* Membuat virtual environment di `%USERPROFILE%\.herta-env`.
-* Menginstall dependensi yang diperlukan.
-* Mengunduh model suara RVC Yamazaki Haruka ke `%APPDATA%\HertaAssistant\models`.
-* Membuat launcher global `herta.cmd` di User PATH.
-* Mendaftarkan shortcut Startup Windows untuk boot greeting dan sleep monitor background.
+The installer will:
+* Create a dedicated Python virtual environment in `%USERPROFILE%\.herta-env`.
+* Install all required dependencies and register the package in editable mode.
+* Download the Yamazaki Haruka RVC model files into `%APPDATA%\HertaAssistant\models`.
+* Create the global `herta.cmd` launcher in your user PATH.
+* Setup Windows Startup shortcuts for boot greeting and background sleep/wake monitor.
+* **Initial Setup Prompt (Optional)**: Prompt you to set your partner name / title (default: `"あなた"` / *Anata*) and your Google Gemini API Key (press Enter to skip or keep defaults).
 
-#### 🔹 Pada Linux:
+#### 🔹 On Linux:
 ```bash
 cd herta-assistant
 chmod +x scripts/install.sh
 ./scripts/install.sh
 ```
 
-Installer akan otomatis membuat virtual environment, mendaftarkan CLI di `~/.local/bin`, serta mengaktifkan systemd user service `herta-sleep-monitor.service`.
+The installer will automatically set up the virtual environment, install dependencies, register the `herta` CLI in `~/.local/bin`, prompt for initial partner name and Gemini API key, and enable the `herta-sleep-monitor.service` systemd user service.
 
 ---
 
-### Opsi 2: Manual (Step-by-Step)
+### Option 2: Manual Installation (Step-by-Step)
 
-Jika Anda ingin menyiapkan virtual environment sendiri:
+If you prefer to manage your virtual environment manually:
 
 ```bash
-# 1. Masuk ke direktori project
+# 1. Navigate to the project directory
 cd herta-assistant
 
-# 2. Buat virtual environment
+# 2. Create Python virtual environment
 python -m venv .venv
 
-# 3. Aktifkan virtual environment
+# 3. Activate the virtual environment
 # Windows (PowerShell):
 .venv\Scripts\Activate.ps1
 # Windows (CMD):
@@ -104,14 +105,17 @@ python -m venv .venv
 # Linux:
 source .venv/bin/activate
 
-# 4. Update pip & install dependensi
+# 4. Upgrade pip & install dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 5. Install package dalam mode editable
+# 5. Install herta-assistant in editable mode
 pip install -e .
 
-# 6. Jalankan Herta Desktop Mascot
+# 6. (Optional) Configure partner name and Gemini API key
+herta config --name "あなた" --key "YOUR_GEMINI_API_KEY"
+
+# 7. Launch Madam Herta Desktop Mascot
 herta gui
 ```
 

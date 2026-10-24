@@ -78,7 +78,44 @@ $MonitorShortcut.TargetPath = "wscript.exe"
 $MonitorShortcut.Arguments = "`"$MonitorVbsPath`""
 $MonitorShortcut.Save()
 
+# 6. Optional Initial Configuration (Partner Name & Gemini API Key)
+Write-Host "`n======================================================================" -ForegroundColor Cyan
+Write-Host "⚙️   INITIAL CONFIGURATION (OPTIONAL)" -ForegroundColor Cyan
+Write-Host "======================================================================" -ForegroundColor Cyan
+Write-Host "Press [Enter] to keep defaults, or customize your initial settings:`n" -ForegroundColor Gray
+
+# Prompt Partner Name
+$CurrentName = "あなた"
+try {
+    $CfgRaw = & $PythonExe -c "from herta.config import load_config; print(load_config().get('partner_name', 'あなた'))"
+    if ($CfgRaw) { $CurrentName = $CfgRaw.Trim() }
+} catch {}
+
+$InputName = Read-Host "Partner name / title Madam Herta uses to address you (Default: $CurrentName)"
+if (-not [string]::IsNullOrWhiteSpace($InputName)) {
+    & $PythonExe -m herta.cli config --name $InputName
+}
+
+# Prompt Gemini API Key
+$HasKey = $false
+try {
+    $KeyStatus = & $PythonExe -c "from herta.config import load_config; print(bool(load_config().get('gemini_api_key')))"
+    if ($KeyStatus -eq "True") { $HasKey = $true }
+} catch {}
+
+if ($HasKey) {
+    Write-Host "Google Gemini API Key is already configured." -ForegroundColor Green
+    $InputKey = Read-Host "Update Gemini API Key (Optional - press [Enter] to keep existing)"
+} else {
+    $InputKey = Read-Host "Enter your Google Gemini API Key (Optional - press [Enter] to skip)"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($InputKey)) {
+    & $PythonExe -m herta.cli config --key $InputKey
+}
+
 Write-Host "`n======================================================================" -ForegroundColor Green
 Write-Host "✨ Installation Complete for Windows!" -ForegroundColor Green
 Write-Host "You can now run 'herta' or 'herta chat' in PowerShell or CMD." -ForegroundColor Green
 Write-Host "======================================================================" -ForegroundColor Green
+
