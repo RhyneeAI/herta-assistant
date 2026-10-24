@@ -1,8 +1,11 @@
 """
-Cross-platform power event monitor (sleep and wake).
+Cross-platform power event monitor (sleep and wake) with strict debounce protection.
 Supports Linux (systemd-logind DBus) and Windows (WM_POWERBROADCAST message loop).
+Includes a 15-minute cooldown between triggers to prevent notification/audio spam
+and avoid failed suspend states that cause laptop overheating.
 """
 
+import json
 import os
 import subprocess
 import sys
@@ -11,59 +14,115 @@ import time
 
 from herta.audio import play_audio
 from herta.companion import run_companion_loop
-from herta.config import AUDIO_DIR, IS_WINDOWS, load_config
+from herta.config import AUDIO_DIR, CACHE_DIR, IS_WINDOWS, load_config
 from herta.notifier import show_notification
 
 SLEEP_AUDIO = os.path.join(AUDIO_DIR, "herta_sleep.wav")
 WAKE_AUDIO = os.path.join(AUDIO_DIR, "herta_wake.wav")
+STATE_FILE = os.path.join(CACHE_DIR, "power_state.json")
+
+# Strict 15-minute cooldown (900 seconds) to prevent spam and suspend loops
+COOLDOWN_SECONDS = 900
 
 
-def on_sleep():
-    """Triggered right before the machine enters sleep / suspend."""
+def get_last_event_time(event_type: str) -> float:
+    """Retrieve timestamp of last recorded sleep/wake event."""
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return float(data.get(event_type, 0))
+        except Exception:
+            pass
+    return 0.0
+
+
+def save_event_time(event_type: str, timestamp: float):
+    """Persist event timestamp to disk."""
+    data = {}
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            data = {}
+    data[event_type] = timestamp
+    try:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+
+
+def on_sleep() -> bool:
+    """
+    Triggered right before the machine enters sleep / suspend.
+    Enforces a strict 15-minute cooldown to prevent notification spam and suspend aborts.
+    Returns True if voiceline was played, False if skipped.
+    """
+    now = time.time()
+    last_sleep = get_last_event_time("last_sleep")
+    elapsed = now - last_sleep
+
+    if elapsed < COOLDOWN_SECONDS:
+        sys.stderr.write(
+            f"Sleep detected within cooldown ({int(elapsed)}s < {COOLDOWN_SECONDS}s). Skipping to protect hardware.\n"
+        )
+        return False
+
+    save_event_time("last_sleep", now)
+
+    # Note: We strictly avoid desktop notifications (notify-send) right before sleep,
+    # because notification popups in desktop environments (like GNOME) wake up the
+    # display server and cause systemd to abort sleep back to standby!
+    if os.path.exists(SLEEP_AUDIO):
+        try:
+            play_audio(SLEEP_AUDIO, timeout=8)
+        except Exception:
+            pass
+        # Brief 0.5s pause allowing PipeWire/ALSA to release hardware codec before kernel suspend
+        time.sleep(0.5)
+
+    return True
+
+
+def on_wake() -> bool:
+    """
+    Triggered right after the machine resumes from sleep.
+    Enforces cooldown and minimum sleep duration check.
+    """
+    now = time.time()
+    last_wake = get_last_event_time("last_wake")
+    last_sleep = get_last_event_time("last_sleep")
+
+    # If the system "woke up" in less than 8 seconds, it was an aborted suspend / glitch
+    if (now - last_sleep) < 8:
+        sys.stderr.write("Premature resume detected (< 8s from sleep request). Skipping wake greeting.\n")
+        return False
+
+    elapsed = now - last_wake
+    if elapsed < COOLDOWN_SECONDS:
+        sys.stderr.write(
+            f"Wake detected within cooldown ({int(elapsed)}s < {COOLDOWN_SECONDS}s). Skipping to avoid spam.\n"
+        )
+        return False
+
+    save_event_time("last_wake", now)
+
+    time.sleep(2)  # Wait for display and audio subsystem to settle
+
     cfg = load_config()
-    partner = cfg.get("partner_name", "Rinne")
-    jp = f"もう寝るの、{partner}？クルクル〜おやすみ、また明日ね！"
-    id_sub = f"Mau tidur sekarang, {partner}? Kuru kuru~ Selamat malam, sampai jumpa besok!"
-
-    show_notification(f"💎 Madam Herta: {jp}", f"🇮🇩 {id_sub}")
-    play_audio(SLEEP_AUDIO, timeout=6)
-
-
-def on_wake():
-    """Triggered right after the machine resumes from sleep."""
-    cfg = load_config()
-    partner = cfg.get("partner_name", "Rinne")
+    partner = cfg.get("partner_name", "あなた")
     jp = f"クルクル〜クルリン！おかえり、{partner}！さあ、研究の続きを始めましょう！"
     id_sub = f"Kuru kuru~ Kururin! Selamat datang kembali, {partner}! Ayo, mari kita lanjutkan risetnya!"
 
-    time.sleep(2)  # Wait for audio driver to settle
     show_notification(f"💎 Madam Herta: {jp}", f"🇮🇩 {id_sub}")
-    play_audio(WAKE_AUDIO, timeout=12)
+    play_audio(WAKE_AUDIO, timeout=10)
+    return True
 
 
 def run_linux_monitor():
-    """Linux power monitor using systemd-logind DBus interface."""
-    inhibitor_proc = None
-
-    def start_inhibitor():
-        try:
-            return subprocess.Popen(
-                ["systemd-inhibit", "--what=sleep", "--why=Madam Herta Sleep Audio", "--mode=delay", "sleep", "infinity"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-        except Exception:
-            return None
-
-    def stop_inhibitor(proc):
-        if proc:
-            try:
-                proc.terminate()
-                proc.wait(timeout=1)
-            except Exception:
-                pass
-
-    inhibitor_proc = start_inhibitor()
+    """Linux power monitor using systemd-logind DBus interface with delay inhibitor."""
     cmd = [
         "gdbus", "monitor", "--system",
         "--dest", "org.freedesktop.login1",
@@ -80,13 +139,9 @@ def run_linux_monitor():
         for line in proc.stdout:
             if "PrepareForSleep (true," in line:
                 on_sleep()
-                stop_inhibitor(inhibitor_proc)
-                inhibitor_proc = None
             elif "PrepareForSleep (false," in line:
-                inhibitor_proc = start_inhibitor()
                 on_wake()
     finally:
-        stop_inhibitor(inhibitor_proc)
         if proc:
             proc.terminate()
 
@@ -152,7 +207,6 @@ def run_windows_monitor():
 
 def run_monitor():
     """Run power event listener loop and spontaneous companion thread."""
-    # Launch proactive companion background thread (check-ins every 45-90 minutes)
     companion_thread = threading.Thread(
         target=run_companion_loop,
         kwargs={"min_interval_minutes": 45, "max_interval_minutes": 90},
