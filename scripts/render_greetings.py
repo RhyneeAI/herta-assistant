@@ -5,12 +5,16 @@ Pre-render static greeting, wake, and poke voicelines using authentic in-game
 
 import os
 import shutil
-import subprocess
 import sys
+import numpy as np
+import soundfile as sf
+from scipy.signal import resample_poly
 
 from herta.config import AUDIO_DIR, TMP_DIR
 from herta.rvc import convert_voice
 from herta.tts import synthesize_speech
+
+TARGET_SR = 44100
 
 VOICELINES = {
     "greeting_sweet_wife": {
@@ -24,6 +28,26 @@ VOICELINES = {
     "greeting_casual": {
         "kuru_intro": "kuru_kuru.wav",
         "dialogue": "こんにちは、あなた！マダム・ヘルタよ。今日はどんな研究をするの？"
+    },
+    "herta_morning": {
+        "kuru_intro": "kuru_kuru.wav",
+        "dialogue": "おはよう、あなた！マダム・ヘルタよ。今日も一日、しっかり研究に励みなさい！"
+    },
+    "herta_afternoon": {
+        "kuru_intro": "kuru_kururin.wav",
+        "dialogue": "こんにちは、あなた！マダム・ヘルタよ。午後の研究もサボっちゃダメよ！"
+    },
+    "herta_evening": {
+        "kuru_intro": "kuru_kuru.wav",
+        "dialogue": "こんばんは、あなた！マダム・ヘルタよ。今日の進捗はどうかしら？成果を期待してるわよ。"
+    },
+    "herta_sleep": {
+        "kuru_intro": "kuru_kuruto.wav",
+        "dialogue": "もう寝るの、あなた？おやすみ、また明日ね！"
+    },
+    "herta_wake": {
+        "kuru_intro": "kuru_kururin.wav",
+        "dialogue": "おかえり、あなた！さあ、研究の続きを始めましょう！"
     },
     "poke_sweet_1": {
         "kuru_intro": "kuru_kuruto.wav",
@@ -40,16 +64,23 @@ VOICELINES = {
     "poke_yandere_2": {
         "kuru_intro": None,
         "dialogue": "ふふっ、そんなにつつかないで…抱きしめたくなっちゃうでしょう？♡"
-    },
-    "herta_wake": {
-        "kuru_intro": "kuru_kururin.wav",
-        "dialogue": "おかえり、あなた！さあ、研究の続きを始めましょう！"
     }
 }
 
 
+def load_resampled(path: str, target_sr: int = TARGET_SR) -> np.ndarray:
+    """Load audio file and resample to target sampling rate."""
+    data, sr = sf.read(path)
+    if data.ndim > 1:
+        data = data.mean(axis=1)
+    if sr != target_sr:
+        gcd = np.gcd(sr, target_sr)
+        data = resample_poly(data, target_sr // gcd, sr // gcd)
+    return data.astype(np.float32)
+
+
 def main():
-    print("💎 Rendering voicelines with authentic in-game Kuru Kuru samples + Yamazaki Haruka RVC...")
+    print("Rendering voicelines with authentic in-game Kuru Kuru samples + Yamazaki Haruka RVC...")
     os.makedirs(AUDIO_DIR, exist_ok=True)
 
     for name, item in VOICELINES.items():
@@ -60,7 +91,7 @@ def main():
         print(f" • Synthesizing dialogue for '{name}'...")
         raw_wav = synthesize_speech(dialogue)
         if not raw_wav or not os.path.exists(raw_wav):
-            print(f" ⚠️ Failed to synthesize {name}")
+            print(f" [!] Failed to synthesize {name}")
             continue
 
         print(f" • Converting '{name}' with RVC v2 Yamazaki Haruka...")
@@ -70,22 +101,21 @@ def main():
             intro_path = os.path.join(AUDIO_DIR, kuru_intro)
             if os.path.exists(intro_path):
                 print(f" • Merging authentic in-game sample '{kuru_intro}' with dialogue...")
-                cmd = [
-                    "ffmpeg", "-y",
-                    "-i", intro_path,
-                    "-i", converted,
-                    "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1[out]",
-                    "-map", "[out]",
-                    out_path
-                ]
-                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print(f" ✅ Saved {out_path} ({os.path.getsize(out_path)} bytes) [Authentic Kuru + RVC]")
-                continue
+                try:
+                    intro_audio = load_resampled(intro_path)
+                    dlg_audio = load_resampled(converted)
+                    pause = np.zeros(int(TARGET_SR * 0.12), dtype=np.float32)
+                    merged = np.concatenate([intro_audio, pause, dlg_audio])
+                    sf.write(out_path, merged, TARGET_SR)
+                    print(f" [OK] Saved {out_path} ({os.path.getsize(out_path)} bytes) [Authentic Kuru + RVC]")
+                    continue
+                except Exception as exc:
+                    print(f" [!] Merge failed ({exc}), copying converted...")
 
         shutil.copyfile(converted, out_path)
-        print(f" ✅ Saved {out_path} ({os.path.getsize(out_path)} bytes) [RVC]")
+        print(f" [OK] Saved {out_path} ({os.path.getsize(out_path)} bytes) [RVC]")
 
-    print("✨ All authentic voicelines successfully rendered!")
+    print("All authentic voicelines successfully rendered!")
 
 
 if __name__ == "__main__":

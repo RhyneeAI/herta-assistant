@@ -19,8 +19,17 @@ if (-not (Test-Path $VenvDir)) {
     python -m venv $VenvDir
 }
 
+# Link .venv in project root for IDE detection (Pyright/VS Code)
+$ProjectVenv = Join-Path $ProjectDir ".venv"
+if (-not (Test-Path $ProjectVenv)) {
+    try {
+        New-Item -ItemType Junction -Path $ProjectVenv -Target $VenvDir -ErrorAction SilentlyContinue | Out-Null
+    } catch {}
+}
+
 $PythonExe = Join-Path $VenvDir "Scripts\python.exe"
 $PipExe = Join-Path $VenvDir "Scripts\pip.exe"
+
 
 # 2. Install Dependencies
 Write-Host "Installing Core Python dependencies..." -ForegroundColor Yellow

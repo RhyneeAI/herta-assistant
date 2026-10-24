@@ -312,12 +312,15 @@ def start_chat(fast_mode: bool = False):
         try:
             user_input = input(f"👉 [{partner}] (Press ENTER to speak / type message): ").strip()
         except (KeyboardInterrupt, EOFError):
-            farewell_jp = f"クルクル〜じゃ、またね、{partner}！怠けちゃダメよ！"
-            farewell_sub = "Kuru kuru~ See you later, darling! Don't slack off!" if sub_lang == "en" else "Kuru kuru~ Sampai jumpa lagi, sayang! Jangan malas ya!"
+            farewell_kuru = os.path.join(AUDIO_DIR, "kuru_kuruto.wav")
+            farewell_jp = f"くるりんっ。じゃ、またね、{partner}！怠けちゃダメよ！"
+            farewell_sub = "Kururin! See you later, darling! Don't slack off!" if sub_lang == "en" else "Kururin! Sampai jumpa lagi, sayang! Jangan malas ya!"
             print(f"\n\n🤖 Madam Herta:")
             print(f"   🇯🇵 「{farewell_jp}」")
             print(f"   {sub_flag} ({farewell_sub})")
-            speak(farewell_jp, rvc_enabled=rvc_active)
+            if os.path.exists(farewell_kuru):
+                play_audio(farewell_kuru)
+            speak(f"じゃ、またね、{partner}！怠けちゃダメよ！", rvc_enabled=rvc_active)
             break
 
         if not user_input:
@@ -333,12 +336,15 @@ def start_chat(fast_mode: bool = False):
 
         # Session commands
         if user_text.lower() in ["exit", "quit", "keluar", "q"]:
-            farewell_jp = f"クルクル〜じゃ、またね、{partner}！頑張りなさい！"
-            farewell_sub = "Kuru kuru~ See you later, darling! Give it your best!" if sub_lang == "en" else "Kuru kuru~ Sampai jumpa lagi, sayang! Semangat ya!"
+            farewell_kuru = os.path.join(AUDIO_DIR, "kuru_kuruto.wav")
+            farewell_jp = f"くるりんっ。じゃ、またね、{partner}！頑張りなさい！"
+            farewell_sub = "Kururin! See you later, darling! Give it your best!" if sub_lang == "en" else "Kururin! Sampai jumpa lagi, sayang! Semangat ya!"
             print(f"\n🤖 Madam Herta:")
             print(f"   🇯🇵 「{farewell_jp}」")
             print(f"   {sub_flag} ({farewell_sub})\n")
-            speak(farewell_jp, rvc_enabled=rvc_active)
+            if os.path.exists(farewell_kuru):
+                play_audio(farewell_kuru)
+            speak(f"じゃ、またね、{partner}！頑張りなさい！", rvc_enabled=rvc_active)
             break
 
         if user_text.lower().startswith("name "):

@@ -1,10 +1,10 @@
 {
   "herta_sleep": {
     "file": "herta_sleep.wav",
-    "jp": "もう寝るの、あなた？クルクル〜おやすみ、また明日ね！",
-    "romaji": "Mou neru no, anata? Kuru kuru~ Oyasumi, mata ashita ne!",
-    "id": "Mau tidur sekarang, sayang? Kuru kuru~ Selamat malam, sampai jumpa besok!",
-    "en": "Going to sleep now, darling? Kuru kuru~ Good night, see you tomorrow!"
+    "jp": "もう寝るの、あなた？くるりんっ。おやすみ、また明日ね！",
+    "romaji": "Mou neru no, anata? Kururin! Oyasumi, mata ashita ne!",
+    "id": "Mau tidur sekarang, sayang? Kururin! Selamat malam, sampai jumpa besok!",
+    "en": "Going to sleep now, darling? Kururin! Good night, see you tomorrow!"
   },
   "herta_wake": {
     "file": "herta_wake.wav",
@@ -15,24 +15,24 @@
   },
   "herta_morning": {
     "file": "herta_morning.wav",
-    "jp": "クルクル〜クルリン！おはよう、あなた！マダム・ヘルタよ。今日も一日、しっかり研究に励みなさい！",
-    "romaji": "Kuru kuru~ Kururin! Ohayou, anata! Madamu Heruta yo. Kyou mo ichinichi, shikkari kenkyuu ni hageminasai!",
-    "id": "Kuru kuru~ Kururin! Selamat pagi, sayang! Madam Herta di sini. Hari ini semangat ya, jangan malas dalam riset!",
-    "en": "Kuru kuru~ Kururin! Good morning, darling! Madam Herta here. Work hard on our research today!"
+    "jp": "くるくる～――っと！おはよう、あなた！マダム・ヘルタよ。今日も一日、しっかり研究に励みなさい！",
+    "romaji": "Kurukuru~--tto! Ohayou, anata! Madamu Heruta yo. Kyou mo ichinichi, shikkari kenkyuu ni hageminasai!",
+    "id": "Kurukuru~--tto! Selamat pagi, sayang! Madam Herta di sini. Hari ini semangat ya, jangan malas dalam riset!",
+    "en": "Kurukuru~--tto! Good morning, darling! Madam Herta here. Work hard on our research today!"
   },
   "herta_afternoon": {
     "file": "herta_afternoon.wav",
-    "jp": "クルクル〜こんにちは、あなた！マダム・ヘルタよ。午後の研究もサボっちゃダメよ！",
-    "romaji": "Kuru kuru~ Konnichiwa, anata! Madamu Heruta yo. Gogo no kenkyuu mo saboccha dame yo!",
-    "id": "Kuru kuru~ Halo, sayang! Madam Herta di sini. Riset siang ini jangan sampai bolos ya!",
-    "en": "Kuru kuru~ Hello, darling! Madam Herta here. Don't slack off on this afternoon's research!"
+    "jp": "くるりん～っと！こんにちは、あなた！マダム・ヘルタよ。午後の研究もサボっちゃダメよ！",
+    "romaji": "Kururin~--tto! Konnichiwa, anata! Madamu Heruta yo. Gogo no kenkyuu mo saboccha dame yo!",
+    "id": "Kururin~--tto! Halo, sayang! Madam Herta di sini. Riset siang ini jangan sampai bolos ya!",
+    "en": "Kururin~--tto! Hello, darling! Madam Herta here. Don't slack off on this afternoon's research!"
   },
   "herta_evening": {
     "file": "herta_evening.wav",
-    "jp": "クルクル〜こんばんは、あなた！マダム・ヘルタよ。今日の進捗はどうかしら？成果を期待してるわよ。",
-    "romaji": "Kuru kuru~ Konbanwa, anata! Madamu Heruta yo. Kyou no shinchoku wa dou kashira? Seika wo kitai shiteru wa yo.",
-    "id": "Kuru kuru~ Selamat malam, sayang! Madam Herta di sini. Bagaimana progres riset hari ini? Aku tunggu hasilnya ya.",
-    "en": "Kuru kuru~ Good evening, darling! Madam Herta here. How is your progress today? I'm expecting great results."
+    "jp": "くるくる～――っと！こんばんは、あなた！マダム・ヘルタよ。今日の進捗はどうかしら？成果を期待してるわよ。",
+    "romaji": "Kurukuru~--tto! Konbanwa, anata! Madamu Heruta yo. Kyou no shinchoku wa dou kashira? Seika wo kitai shiteru wa yo.",
+    "id": "Kurukuru~--tto! Selamat malam, sayang! Madam Herta di sini. Bagaimana progres riset hari ini? Aku tunggu hasilnya ya.",
+    "en": "Kurukuru~--tto! Good evening, darling! Madam Herta here. How is your progress today? I'm expecting great results."
   },
   "kuru_kuru": {
     "file": "kuru_kuru.wav",

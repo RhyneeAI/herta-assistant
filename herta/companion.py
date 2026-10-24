@@ -32,9 +32,9 @@ BUILTIN_MOMENTS = [
     {
         "category": "bored",
         "audio_file": "nudge_bored_2.wav",
-        "jp": "クルクル〜回るのも飽きちゃったわ。ねえ、何か面白いこと話してよ。",
-        "id": "Kuru kuru~ Muter-muter pun aku mulai bosan. Hei, ceritain sesuatu yang seru dong.",
-        "en": "Kuru kuru~ Even spinning around is getting dull. Hey, tell me something interesting."
+        "jp": "くるくる～――っと！回るのも飽きちゃったわ。ねえ、何か面白いこと話してよ。",
+        "id": "Kurukuru~--tto! Muter-muter pun aku mulai bosan. Hei, ceritain sesuatu yang seru dong.",
+        "en": "Kurukuru~--tto! Even spinning around is getting dull. Hey, tell me something interesting."
     },
     {
         "category": "bored",
@@ -76,9 +76,9 @@ BUILTIN_MOMENTS = [
     {
         "category": "sweet",
         "audio_file": "nudge_sweet_2.wav",
-        "jp": "クルクル〜ちょっと頭がクラクラしちゃった…ねえ、頭なでて？…今だけよ？",
-        "id": "Kuru kuru~ Kepalaku agak pusing nih... hei, elus kepalaku dong? ...cuma sekarang lho ya?",
-        "en": "Kuru kuru~ I'm feeling a bit dizzy... hey, pat my head? ...Only for right now, okay?"
+        "jp": "くるりんっ。ちょっと頭がクラクラしちゃった…ねえ、頭なでて？…今だけよ？",
+        "id": "Kururin! Kepalaku agak pusing nih... hei, elus kepalaku dong? ...cuma sekarang lho ya?",
+        "en": "Kururin! I'm feeling a bit dizzy... hey, pat my head? ...Only for right now, okay?"
     },
     {
         "category": "sweet",
