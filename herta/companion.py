@@ -24,18 +24,21 @@ BUILTIN_MOMENTS = [
     # 1. Bored / Demanding attention
     {
         "category": "bored",
+        "audio_file": "nudge_bored_1.wav",
         "jp": "ねえ、あなた〜。私ちょっと退屈なんだけど。私の相手をしなさいよ！",
         "id": "Hei, sayang~ Aku agak bosan nih. Ajak aku ngobrol dong!",
         "en": "Hey, darling~ I'm a bit bored. Come keep me company!"
     },
     {
         "category": "bored",
+        "audio_file": "nudge_bored_2.wav",
         "jp": "クルクル〜回るのも飽きちゃったわ。ねえ、何か面白いこと話してよ。",
         "id": "Kuru kuru~ Muter-muter pun aku mulai bosan. Hei, ceritain sesuatu yang seru dong.",
         "en": "Kuru kuru~ Even spinning around is getting dull. Hey, tell me something interesting."
     },
     {
         "category": "bored",
+        "audio_file": "nudge_bored_3.wav",
         "jp": "研究ばっかりしてないで、たまには私のことも構いなさいよ。…ちょっとだけだからね！",
         "id": "Jangan cuma fokus riset terus, sesekali perhatikan aku juga dong. ...cuma sebentar lho ya!",
         "en": "Don't just bury yourself in research, give me some attention too. ...Just for a little while, got it?!"
@@ -43,18 +46,21 @@ BUILTIN_MOMENTS = [
     # 2. Caring / Health & Break reminders (Tsundere care)
     {
         "category": "caring",
+        "audio_file": "nudge_caring_1.wav",
         "jp": "ねえ、あなた。ずっと画面見てるけど疲れてない？たまにはお茶でも飲んで休憩しなさいよね。",
         "id": "Hei, sayang. Dari tadi kamu natap layar terus, nggak capek? Sesekali minum teh dan istirahat gih.",
         "en": "Hey, darling. Staring at that screen all this time, aren't you tired? Go drink some tea and rest."
     },
     {
         "category": "caring",
+        "audio_file": "nudge_caring_2.wav",
         "jp": "ちょっと、あなた！根を詰めすぎよ。倒れられたら困るんだから…ちゃんと休んでよね！",
         "id": "Tunggu dulu, sayang! Jangan terlalu memaksakan diri. Kalau kamu sakit kan aku yang repot... istirahat yang bener ya!",
         "en": "Wait a second, darling! You're pushing yourself too hard. Don't you dare collapse... take a proper rest!"
     },
     {
         "category": "caring",
+        "audio_file": "nudge_caring_3.wav",
         "jp": "もう、ちゃんと水分補給してる？お水飲んで、ちょっと肩の力を抜きなさい。",
         "id": "Astaga, kamu udah minum air belum? Minum dulu sana, rilekskan pundakmu sebentar.",
         "en": "Geez, have you been staying hydrated? Drink some water and relax your shoulders."
@@ -62,18 +68,21 @@ BUILTIN_MOMENTS = [
     # 3. Sweet / Affectionate Wife
     {
         "category": "sweet",
+        "audio_file": "nudge_sweet_1.wav",
         "jp": "ふふっ、今日も一生懸命頑張ってるのね。…さすが私の旦那様、かっこいいわよ。",
         "id": "Fufu~ Hari ini kamu kerja keras ya. ...Memang pantas jadi suamiku, keren kok.",
         "en": "Fufu~ You worked so hard again today. ...As expected of my husband, quite handsome."
     },
     {
         "category": "sweet",
+        "audio_file": "nudge_sweet_2.wav",
         "jp": "クルクル〜ちょっと頭がクラクラしちゃった…ねえ、頭なでて？…今だけよ？",
         "id": "Kuru kuru~ Kepalaku agak pusing nih... hei, elus kepalaku dong? ...cuma sekarang lho ya?",
         "en": "Kuru kuru~ I'm feeling a bit dizzy... hey, pat my head? ...Only for right now, okay?"
     },
     {
         "category": "sweet",
+        "audio_file": "nudge_sweet_3.wav",
         "jp": "ねえ、あなた。いつも私の人形の面倒見てくれてありがとね。…べ、別に照れてなんかないわよ！",
         "id": "Hei, sayang. Makasih ya selalu jagain boneka-bonekaku. ...B-bukannya aku malu atau gimana lho ya!",
         "en": "Hey, darling. Thanks for always looking after my puppets. ...I-It's not like I'm blushing or anything!"
@@ -81,6 +90,7 @@ BUILTIN_MOMENTS = [
     # 4. Curious about your work
     {
         "category": "curious",
+        "audio_file": "nudge_curious_1.wav",
         "jp": "ねえ、あなた。今何を作ってるの？ちょっと私にも見せてみなさいよ。",
         "id": "Hei, sayang. Sekarang lagi ngerjain apa sih? Coba perlihatkan sedikit ke aku.",
         "en": "Hey, darling. What are you building right now? Show me a peek."
@@ -88,24 +98,28 @@ BUILTIN_MOMENTS = [
     # 5. Yandere / Possessive Love
     {
         "category": "yandere",
+        "audio_file": "nudge_yandere_1.wav",
         "jp": "ねえ、あなた…今、誰のこと考えてたの？…ふふっ、私だけを見ていればいいのよ…？",
         "id": "Hei, sayang... barusan lagi mikirin siapa? ...Fufu, kamu cuma boleh natap aku tahu...?",
         "en": "Hey, darling... who were you thinking about just now? ...Fufu, your eyes should only be on me... right?"
     },
     {
         "category": "yandere",
+        "audio_file": "nudge_yandere_2.wav",
         "jp": "ふふっ、どこにも行かないでね？私のそばを離れたら…どうなるか分からないわよ…♡",
         "id": "Fufu, jangan pernah pergi ke mana-mana ya? Kalau sampai ninggalin aku... nggak tahu deh apa yang bakal terjadi...♡",
         "en": "Fufu, don't you dare go anywhere, okay? If you ever leave my side... who knows what might happen...♡"
     },
     {
         "category": "yandere",
+        "audio_file": "nudge_yandere_3.wav",
         "jp": "ずっと画面ばかり見て…私に構ってくれないなら、そのパソコン壊しちゃおうかしら…？",
         "id": "Natap layar terus... kalau kamu nggak mau peduliin aku, mending laptop ini kuhancurin aja kali ya...?",
         "en": "Staring at the screen constantly... if you won't pay attention to me, maybe I should just smash this PC...?"
     },
     {
         "category": "yandere",
+        "audio_file": "nudge_yandere_4.wav",
         "jp": "ねえ、あなた。私の人形たちの中に閉じ込めて、永遠に一緒にいられたら素敵だと思わない…？",
         "id": "Hei, sayang. Kalau kamu kukunci di dalam salah satu bonekaku biar kita bersama selamanya, bukankah terdengar manis...?",
         "en": "Hey, darling. Wouldn't it be wonderful if I sealed you inside one of my puppets so we could be together forever...?"
@@ -211,8 +225,12 @@ def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str = "
     return None
 
 
-def trigger_spontaneous_interaction():
-    """Trigger a single spontaneous companion interaction right now."""
+def trigger_spontaneous_interaction(force_dynamic: bool = False):
+    """Trigger a single spontaneous companion interaction.
+    
+    By default, uses 100% pre-rendered offline audio files to eliminate
+    Gemini API requests and protect against rate limit exhaustion (HTTP 429).
+    """
     cfg = load_config()
     partner = cfg.get("partner_name", "あなた")
     api_key = cfg.get("gemini_api_key", "")
@@ -222,8 +240,7 @@ def trigger_spontaneous_interaction():
     sub_lang = cfg.get("subtitle_language", "id")
 
     moment = None
-    # 50% chance to try dynamic generation if API key exists, otherwise pick from curated library
-    if api_key and random.random() < 0.5:
+    if force_dynamic and api_key:
         moment = generate_dynamic_moment(
             partner_name=partner,
             api_key=api_key,
@@ -236,10 +253,11 @@ def trigger_spontaneous_interaction():
         jp_text = moment["jp"]
         sub_text = moment["sub"]
         flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
+        audio_file = None
     else:
         if romance_style == "yandere":
             yandere_moments = [m for m in BUILTIN_MOMENTS if m.get("category") == "yandere"]
-            if yandere_moments and random.random() < 0.75:
+            if yandere_moments:
                 chosen = random.choice(yandere_moments)
             else:
                 chosen = random.choice(BUILTIN_MOMENTS)
@@ -256,11 +274,18 @@ def trigger_spontaneous_interaction():
             flag = "🇮🇩"
             sub_raw = chosen.get("id", chosen.get("en"))
             sub_text = sub_raw.replace("sayang", "sayang" if partner == "あなた" else partner)
+        audio_file = chosen.get("audio_file")
 
     # 1. Desktop banner notification with Herta avatar icon
     show_notification(f"Madam Herta: {jp_text}", f"{flag} {sub_text}")
 
-    # 2. Synthesize audio
+    # 2. Play audio: prefer pre-rendered offline WAV (0 API calls, 0 dynamic CPU lag)
+    audio_path = os.path.join(AUDIO_DIR, audio_file) if audio_file else None
+    if audio_path and os.path.isfile(audio_path):
+        play_audio(audio_path, timeout=15)
+        return
+
+    # Fallback to dynamic synthesis only if offline WAV is absent
     raw_audio = synthesize_speech(jp_text)
     if not raw_audio:
         return
@@ -269,7 +294,6 @@ def trigger_spontaneous_interaction():
     if rvc_enabled:
         final_audio = convert_voice(raw_audio)
 
-    # 3. Play audio
     play_audio(final_audio, timeout=15)
 
 

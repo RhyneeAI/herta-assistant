@@ -160,44 +160,33 @@ class CompanionWorker(QThread):
             try:
                 cfg = load_config()
                 partner = cfg.get("partner_name", "あなた")
-                api_key = cfg.get("gemini_api_key", "")
-                chat_model = cfg.get("gemini_chat_model", "gemini-3.5-flash")
                 romance_style = cfg.get("romance_address_style", "sweet_wife")
                 sub_lang = cfg.get("subtitle_language", "id")
                 rvc_enabled = cfg.get("rvc_enabled", True)
 
-                moment = None
-                if api_key and random.random() < 0.5:
-                    moment = generate_dynamic_moment(
-                        partner_name=partner,
-                        api_key=api_key,
-                        chat_model=chat_model,
-                        romance_style=romance_style,
-                        subtitle_lang=sub_lang
-                    )
-
-                if moment:
-                    jp_text = moment["jp"]
-                    sub_text = moment["sub"]
-                    flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
+                if romance_style == "yandere":
+                    y_moments = [m for m in BUILTIN_MOMENTS if m.get("category") == "yandere"]
+                    chosen = random.choice(y_moments if y_moments else BUILTIN_MOMENTS)
                 else:
-                    if romance_style == "yandere":
-                        y_moments = [m for m in BUILTIN_MOMENTS if m.get("category") == "yandere"]
-                        chosen = random.choice(y_moments if y_moments else BUILTIN_MOMENTS)
-                    else:
-                        s_moments = [m for m in BUILTIN_MOMENTS if m.get("category") != "yandere"]
-                        chosen = random.choice(s_moments if s_moments else BUILTIN_MOMENTS)
+                    s_moments = [m for m in BUILTIN_MOMENTS if m.get("category") != "yandere"]
+                    chosen = random.choice(s_moments if s_moments else BUILTIN_MOMENTS)
 
-                    jp_text = chosen["jp"].replace("あなた", partner)
-                    if sub_lang == "en":
-                        flag = "🇬🇧"
-                        sub_text = chosen.get("en", chosen.get("id")).replace("darling", "darling" if partner == "あなた" else partner)
-                    else:
-                        flag = "🇮🇩"
-                        sub_text = chosen.get("id", chosen.get("en")).replace("sayang", "sayang" if partner == "あなた" else partner)
+                jp_text = chosen["jp"].replace("あなた", partner)
+                if sub_lang == "en":
+                    flag = "🇬🇧"
+                    sub_text = chosen.get("en", chosen.get("id")).replace("darling", "darling" if partner == "あなた" else partner)
+                else:
+                    flag = "🇮🇩"
+                    sub_text = chosen.get("id", chosen.get("en")).replace("sayang", "sayang" if partner == "あなた" else partner)
 
                 self.moment_triggered.emit(jp_text, sub_text, flag)
-                speak(jp_text, rvc_enabled=rvc_enabled)
+
+                audio_file = chosen.get("audio_file")
+                audio_path = os.path.join(AUDIO_DIR, audio_file) if audio_file else None
+                if audio_path and os.path.isfile(audio_path):
+                    play_audio(audio_path, timeout=15)
+                else:
+                    speak(jp_text, rvc_enabled=rvc_enabled)
             except Exception as exc:
                 sys.stderr.write(f"Companion worker error: {exc}\n")
 
