@@ -15,9 +15,12 @@ import wave
 from herta.config import TMP_DIR, load_config
 
 
-async def _synthesize_edge_async(text: str, output_path: str, voice: str) -> bool:
+async def _synthesize_edge_async(text: str, output_path: str, voice: str, romance_mode: bool = True) -> bool:
     import edge_tts
-    communicate = edge_tts.Communicate(text, voice, pitch="+10Hz", rate="+5%")
+    # Soft, sweet, melodic anime romance cadence
+    pitch = "+8Hz" if romance_mode else "+10Hz"
+    rate = "+2%" if romance_mode else "+5%"
+    communicate = edge_tts.Communicate(text, voice, pitch=pitch, rate=rate)
     await communicate.save(output_path)
     return os.path.exists(output_path) and os.path.getsize(output_path) > 500
 
@@ -28,6 +31,7 @@ def synthesize_speech(text: str, output_path: str = None) -> str:
     Returns the filepath of the generated audio file.
     """
     cfg = load_config()
+    romance_mode = cfg.get("romance_mode", True)
     if output_path is None:
         output_path = os.path.join(TMP_DIR, "base_speech.mp3")
 
@@ -40,7 +44,7 @@ def synthesize_speech(text: str, output_path: str = None) -> str:
     # 1. Primary: Edge-TTS Japanese Neural Voice
     voice = cfg.get("tts_voice", "ja-JP-NanamiNeural")
     try:
-        success = asyncio.run(_synthesize_edge_async(text, output_path, voice))
+        success = asyncio.run(_synthesize_edge_async(text, output_path, voice, romance_mode=romance_mode))
         if success:
             return output_path
     except Exception as exc:

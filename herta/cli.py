@@ -50,6 +50,7 @@ def main():
     config_parser.add_argument("--name", type=str, help="Set partner name")
     config_parser.add_argument("--key", type=str, help="Set Gemini API key")
     config_parser.add_argument("--rvc", choices=["on", "off"], help="Enable or disable RVC by default")
+    config_parser.add_argument("--romance", choices=["on", "off"], help="Enable or disable romance mode (intimate wife tone)")
 
     args = parser.parse_args()
 
@@ -84,6 +85,9 @@ def main():
             changed = True
         if args.rvc:
             cfg["rvc_enabled"] = (args.rvc == "on")
+            changed = True
+        if args.romance:
+            cfg["romance_mode"] = (args.romance == "on")
             changed = True
 
         if changed:
