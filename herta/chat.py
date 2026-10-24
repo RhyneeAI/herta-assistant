@@ -272,27 +272,27 @@ def start_chat(fast_mode: bool = False):
     if romance_mode:
         if romance_style == "yandere":
             greeting_audio = os.path.join(AUDIO_DIR, "greeting_yandere.wav")
-            greeting_jp = "クルクル〜クルリン…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
+            greeting_jp = "くるりん～っと…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
             greeting_sub = (
-                "Kuru kuru~ Kururin... Fufu, you've finally come to see me, darling...♡ I've been waiting for you forever, you know...?"
+                "Kururin~--tto... Fufu, you've finally come to see me, darling...♡ I've been waiting for you forever, you know...?"
                 if sub_lang == "en" else
-                "Kuru kuru~ Kururin... Fufu, akhirnya kamu datang juga menemuiku, sayangku...♡ Dari tadi aku nungguin kamu terus tahu...?"
+                "Kururin~--tto... Fufu, akhirnya kamu datang juga menemuiku, sayangku...♡ Dari tadi aku nungguin kamu terus tahu...?"
             )
         else:
             greeting_audio = os.path.join(AUDIO_DIR, "greeting_sweet_wife.wav")
-            greeting_jp = "クルクル〜クルリン！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
+            greeting_jp = "くるくる～――っと！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
             greeting_sub = (
-                "Kuru kuru~ Kururin! Hey darling... I'm so glad to see you today. What shall we do together?"
+                "Kurukuru~--tto! Hey darling... I'm so glad to see you today. What shall we do together?"
                 if sub_lang == "en" else
-                "Kuru kuru~ Kururin! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
+                "Kurukuru~--tto! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
             )
     else:
         greeting_audio = os.path.join(AUDIO_DIR, "greeting_casual.wav")
-        greeting_jp = f"クルクル〜クルリン！こんにちは、{partner}！マダム・ヘルタよ。今日はどんな研究をするの？"
+        greeting_jp = f"くるくる～――っと！こんにちは、{partner}！マダム・ヘルタよ。今日はどんな研究をするの？"
         greeting_sub = (
-            f"Kuru kuru~ Kururin! Hello, {partner}! Madam Herta here. What research are we tackling today?"
+            f"Kurukuru~--tto! Hello, {partner}! Madam Herta here. What research are we tackling today?"
             if sub_lang == "en" else
-            f"Kuru kuru~ Kururin! Halo, {partner}! Madam Herta di sini. Hari ini mau teliti apa?"
+            f"Kurukuru~--tto! Halo, {partner}! Madam Herta di sini. Hari ini mau teliti apa?"
         )
 
     sub_flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"

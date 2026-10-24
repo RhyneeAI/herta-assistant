@@ -8,10 +8,10 @@
   },
   "herta_wake": {
     "file": "herta_wake.wav",
-    "jp": "クルクル〜クルリン！おかえり、あなた！さあ、研究の続きを始めましょう！",
-    "romaji": "Kuru kuru~ Kururin! Okaeri, anata! Saa, kenkyuu no tsuzuki wo hajimemashou!",
-    "id": "Kuru kuru~ Kururin! Selamat datang kembali, sayang! Ayo, mari kita lanjutkan risetnya!",
-    "en": "Kuru kuru~ Kururin! Welcome back, darling! Come on, let's continue our research!"
+    "jp": "くるりん～っと！おかえり、あなた！さあ、研究の続きを始めましょう！",
+    "romaji": "Kururin~--tto! Okaeri, anata! Saa, kenkyuu no tsuzuki wo hajimemashou!",
+    "id": "Kururin~--tto! Selamat datang kembali, sayang! Ayo, mari kita lanjutkan risetnya!",
+    "en": "Kururin~--tto! Welcome back, darling! Come on, let's continue our research!"
   },
   "herta_morning": {
     "file": "herta_morning.wav",
@@ -33,5 +33,33 @@
     "romaji": "Kuru kuru~ Konbanwa, anata! Madamu Heruta yo. Kyou no shinchoku wa dou kashira? Seika wo kitai shiteru wa yo.",
     "id": "Kuru kuru~ Selamat malam, sayang! Madam Herta di sini. Bagaimana progres riset hari ini? Aku tunggu hasilnya ya.",
     "en": "Kuru kuru~ Good evening, darling! Madam Herta here. How is your progress today? I'm expecting great results."
+  },
+  "kuru_kuru": {
+    "file": "kuru_kuru.wav",
+    "jp": "くるくる～――っと。",
+    "romaji": "Kurukuruu--tto.",
+    "id": "Kurukuru~--tto. (Suara Battle Asli In-Game)",
+    "en": "Kurukuru~--tto. (Authentic In-Game Battle Voiceline)"
+  },
+  "kuru_kururin": {
+    "file": "kuru_kururin.wav",
+    "jp": "くるりん～っと。",
+    "romaji": "Kururin--tto.",
+    "id": "Kururin~--tto. (Suara Talent Asli In-Game)",
+    "en": "Kururin~--tto. (Authentic In-Game Talent Voiceline)"
+  },
+  "kuru_kuruto": {
+    "file": "kuru_kuruto.wav",
+    "jp": "くるりんっ。",
+    "romaji": "Kururin!",
+    "id": "Kururin! (Suara Putaran Cepat Asli In-Game)",
+    "en": "Kururin! (Authentic In-Game Quick Spin Voiceline)"
+  },
+  "kuru_sfx": {
+    "file": "kuru_sfx.wav",
+    "jp": "くるりんっ！✨",
+    "romaji": "Kururin! (SFX)",
+    "id": "Kururin!✨ (Disertai Efek Denting Palu Boneka)",
+    "en": "Kururin!✨ (Accompanied by Puppet Hammer SFX)"
   }
 }

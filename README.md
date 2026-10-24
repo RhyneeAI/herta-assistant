@@ -9,9 +9,11 @@ Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎は
 ## ✨ Features
 
 * **Authentic Japanese Voice (山崎はるか / Herta JP)**:
-  Trained on official voicelines from Honkai: Star Rail via RVC v2 (Retrieval-based Voice Conversion) for genuine anime seiyuu cadence and tone.
+  Trained on official voicelines from *Honkai: Star Rail* via RVC v2 (Retrieval-based Voice Conversion) for genuine anime seiyuu cadence, tone, and emotional inflection.
+* **Authentic In-Game "Kuru Kuru~ Kururin~" Voice Samples**:
+  Direct in-game battle & talent audio clips (くるくる～――っと！, くるりん～っと！, くるりんっ！) from *Honkai: Star Rail* integrated into greetings, mascot pokes, wake-ups, and dedicated Kuru Kuru interactive triggers.
 * **Desktop Mascot & System Tray GUI (`herta gui`)**:
-  Interactive desktop companion combining a frameless, transparent, draggable anime mascot (with animated Kuru Kuru spinning GIF and live subtitle speech bubbles) and an unobtrusive system tray applet with quick controls.
+  Interactive desktop companion combining a frameless, transparent, draggable anime mascot (with animated Kuru Kuru spinning GIF, mini action toolbar, and live subtitle speech bubbles) and an unobtrusive system tray applet with quick controls. Includes an interactive `🌀 Kuru Kuru!` button, voice replays (`🔊`), and quick suggestion chips.
 * **Subtitles in Indonesian & English**:
   Every response displays the Japanese line alongside an Indonesian (`id`) or English (`en`) translation subtitle.
 * **Proactive Companion & Wife Mode (Sweet Wife & Yandere)**:

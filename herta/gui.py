@@ -243,6 +243,7 @@ class FloatingMascot(QWidget):
     and smooth native Wayland & X11 drag-and-drop movement.
     """
     poke_triggered = pyqtSignal()
+    kuru_triggered = pyqtSignal()
     chat_requested = pyqtSignal()
     hide_requested = pyqtSignal()
     quit_requested = pyqtSignal()
@@ -329,6 +330,10 @@ class FloatingMascot(QWidget):
         btn_chat.setToolTip("Open Live Chat Window")
         btn_chat.clicked.connect(self.chat_requested.emit)
 
+        btn_kuru = QPushButton("🌀", self.toolbar)
+        btn_kuru.setToolTip("Kuru Kuru! (Authentic in-game voice)")
+        btn_kuru.clicked.connect(self.kuru_triggered.emit)
+
         btn_poke = QPushButton("✨", self.toolbar)
         btn_poke.setToolTip("Poke / Interact with Madam Herta")
         btn_poke.clicked.connect(self.poke_triggered.emit)
@@ -342,6 +347,7 @@ class FloatingMascot(QWidget):
         btn_quit.clicked.connect(self.quit_requested.emit)
 
         tb_layout.addWidget(btn_chat)
+        tb_layout.addWidget(btn_kuru)
         tb_layout.addWidget(btn_poke)
         tb_layout.addWidget(btn_hide)
         tb_layout.addWidget(btn_quit)
@@ -421,6 +427,7 @@ class FloatingMascot(QWidget):
             }
         """)
         act_chat = menu.addAction("💬 Live Chat Window")
+        act_kuru = menu.addAction("🌀 Kuru Kuru! (くるくる〜)")
         act_poke = menu.addAction("✨ Poke Madam Herta")
         menu.addSeparator()
         act_hide = menu.addAction("⬇️ Minimize to System Tray")
@@ -429,6 +436,8 @@ class FloatingMascot(QWidget):
         action = menu.exec(event.globalPos())
         if action == act_chat:
             self.chat_requested.emit()
+        elif action == act_kuru:
+            self.kuru_triggered.emit()
         elif action == act_poke:
             self.poke_triggered.emit()
         elif action == act_hide:
@@ -463,6 +472,7 @@ class ChatDialog(QDialog):
     Features topic suggestion chips, audio replays, and instant greeting.
     """
     settings_changed = pyqtSignal()
+    kuru_triggered = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -623,6 +633,7 @@ class ChatDialog(QDialog):
         chips_layout.setSpacing(6)
 
         chips_data = [
+            ("🌀 Kuru Kuru!", "__kuru__"),
             ("☕ Minta Semangat", "ねえ、ヘルタ。私に元気をちょうだい！"),
             ("💧 Ingatkan Minum", "ちゃんと休憩と水分補給してる？"),
             ("🔬 Riset Hari Ini", "今日の研究成果はどうかしら？"),
@@ -646,7 +657,10 @@ class ChatDialog(QDialog):
                     color: #ffffff;
                 }
             """)
-            btn_chip.clicked.connect(lambda checked, text=prompt_text: self.send_to_herta(text, is_voice=False))
+            if prompt_text == "__kuru__":
+                btn_chip.clicked.connect(self.on_kuru_chip_clicked)
+            else:
+                btn_chip.clicked.connect(lambda checked, text=prompt_text: self.send_to_herta(text, is_voice=False))
             chips_layout.addWidget(btn_chip)
 
         chips_layout.addStretch()
@@ -708,6 +722,27 @@ class ChatDialog(QDialog):
         save_config(cfg)
         self.update_header_badges()
         self.settings_changed.emit()
+
+    def on_kuru_chip_clicked(self):
+        """Play authentic in-game Kuru Kuru audio directly inside the chat dialog."""
+        cfg = load_config()
+        sub_lang = cfg.get("subtitle_language", "id")
+
+        kuru_options = [
+            ("kuru_kuru.wav", "くるくる～――っと。", "Kuru kuru~--tto.", "Kuru kuru~--tto."),
+            ("kuru_kururin.wav", "くるりん～っと。", "Kururin~--tto.", "Kururin~--tto."),
+            ("kuru_kuruto.wav", "くるりんっ。", "Kururin!", "Kururin!"),
+            ("kuru_sfx.wav", "くるりんっ！✨", "Kururin!✨ (Sound Effect)", "Kururin!✨ (Sound Effect)"),
+        ]
+        audio_name, jp, id_sub, en_sub = random.choice(kuru_options)
+        sub = en_sub if sub_lang == "en" else id_sub
+        flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
+
+        audio_path = os.path.join(AUDIO_DIR, audio_name)
+        self.add_bubble("Madam Herta", jp, sub, flag, audio_file=audio_path)
+        if os.path.exists(audio_path):
+            threading.Thread(target=play_audio, args=(audio_path,), daemon=True).start()
+        self.kuru_triggered.emit()
 
     def add_bubble(self, sender: str, text: str, sub: str = "", flag: str = "", audio_file: str = ""):
         """
@@ -790,27 +825,27 @@ class ChatDialog(QDialog):
         if romance_mode:
             if romance_style == "yandere":
                 greeting_audio = os.path.join(AUDIO_DIR, "greeting_yandere.wav")
-                jp = "クルクル〜クルリン…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
+                jp = "くるりん～っと…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
                 sub = (
-                    "Kuru kuru~ Kururin... Fufu, you've finally come to see me, darling...♡ I've been waiting for you forever, you know...?"
+                    "Kururin~--tto... Fufu, you've finally come to see me, darling...♡ I've been waiting for you forever, you know...?"
                     if sub_lang == "en" else
-                    "Kuru kuru~ Kururin... Fufu, akhirnya kamu datang juga menemuiku, sayangku...♡ Dari tadi aku nungguin kamu terus tahu...?"
+                    "Kururin~--tto... Fufu, akhirnya kamu datang juga menemuiku, sayangku...♡ Dari tadi aku nungguin kamu terus tahu...?"
                 )
             else:
                 greeting_audio = os.path.join(AUDIO_DIR, "greeting_sweet_wife.wav")
-                jp = "クルクル〜クルリン！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
+                jp = "くるくる～――っと！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
                 sub = (
-                    "Kuru kuru~ Kururin! Hey darling... I'm so glad to see you today. What shall we do together?"
+                    "Kurukuru~--tto! Hey darling... I'm so glad to see you today. What shall we do together?"
                     if sub_lang == "en" else
-                    "Kuru kuru~ Kururin! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
+                    "Kurukuru~--tto! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
                 )
         else:
             greeting_audio = os.path.join(AUDIO_DIR, "greeting_casual.wav")
-            jp = f"クルクル〜クルリン！こんにちは、{partner}！マダム・ヘルタよ。今日はどんな研究をするの？"
+            jp = f"くるくる～――っと！こんにちは、{partner}！マダム・ヘルタよ。今日はどんな研究をするの？"
             sub = (
-                f"Kuru kuru~ Kururin! Hello, {partner}! Madam Herta here. What research are we tackling today?"
+                f"Kurukuru~--tto! Hello, {partner}! Madam Herta here. What research are we tackling today?"
                 if sub_lang == "en" else
-                f"Kuru kuru~ Kururin! Halo, {partner}! Madam Herta di sini. Hari ini mau teliti apa?"
+                f"Kurukuru~--tto! Halo, {partner}! Madam Herta di sini. Hari ini mau teliti apa?"
             )
 
         flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
@@ -932,6 +967,11 @@ class HertaTrayApp(QSystemTrayIcon):
         self.act_nudge.triggered.connect(self.trigger_nudge)
         self.menu.addAction(self.act_nudge)
 
+        # 4. Kuru Kuru
+        self.act_kuru = QAction("🌀 Kuru Kuru! (くるくる〜)", self)
+        self.act_kuru.triggered.connect(self.trigger_kuru)
+        self.menu.addAction(self.act_kuru)
+
         self.menu.addSeparator()
 
         # 4. Romance Style Submenu
@@ -991,11 +1031,13 @@ class HertaTrayApp(QSystemTrayIcon):
     def connect_signals(self):
         self.activated.connect(self.on_tray_activated)
         self.mascot.poke_triggered.connect(self.on_poke_mascot)
+        self.mascot.kuru_triggered.connect(self.trigger_kuru)
         self.mascot.chat_requested.connect(self.open_chat)
         self.mascot.hide_requested.connect(self.hide_mascot)
         self.mascot.quit_requested.connect(self.quit_app)
         self.companion_thread.moment_triggered.connect(self.on_companion_moment)
         self.chat_dialog.settings_changed.connect(self.sync_settings_from_dialog)
+        self.chat_dialog.kuru_triggered.connect(self.on_chat_kuru)
 
     def sync_settings_from_dialog(self):
         cfg = load_config()
@@ -1057,13 +1099,54 @@ class HertaTrayApp(QSystemTrayIcon):
             sub = chosen.get("id", chosen.get("en")).replace("sayang", "sayang" if partner == "あなた" else partner)
 
         self.on_companion_moment(jp, sub, flag)
-        threading.Thread(target=speak, args=(jp,), kwargs={"rvc_enabled": rvc_enabled}, daemon=True).start()
+
+        audio_name = chosen.get("audio_file")
+        audio_path = os.path.join(AUDIO_DIR, audio_name) if audio_name else None
+        if audio_path and os.path.exists(audio_path):
+            threading.Thread(target=play_audio, args=(audio_path,), daemon=True).start()
+        else:
+            threading.Thread(target=speak, args=(jp,), kwargs={"rvc_enabled": rvc_enabled}, daemon=True).start()
+
+    def trigger_kuru(self):
+        """Play authentic in-game Kuru Kuru voiceline with speech bubble."""
+        cfg = load_config()
+        sub_lang = cfg.get("subtitle_language", "id")
+
+        kuru_options = [
+            ("kuru_kuru.wav", "くるくる～――っと。", "Kuru kuru~--tto.", "Kuru kuru~--tto."),
+            ("kuru_kururin.wav", "くるりん～っと。", "Kururin~--tto.", "Kururin~--tto."),
+            ("kuru_kuruto.wav", "くるりんっ。", "Kururin!", "Kururin!"),
+            ("kuru_sfx.wav", "くるりんっ！✨", "Kururin!✨ (Sound Effect)", "Kururin!✨ (Sound Effect)"),
+        ]
+        audio_name, jp, id_sub, en_sub = random.choice(kuru_options)
+        sub = en_sub if sub_lang == "en" else id_sub
+        flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
+
+        if self.mascot.isVisible():
+            self.mascot.speech_bubble.show_message(jp, sub, flag, duration_ms=4000)
+
+        audio_path = os.path.join(AUDIO_DIR, audio_name)
+        if os.path.exists(audio_path):
+            threading.Thread(target=play_audio, args=(audio_path,), daemon=True).start()
+
+    def on_chat_kuru(self):
+        """Display speech bubble on mascot when Kuru Kuru is triggered from chat."""
+        if self.mascot.isVisible():
+            cfg = load_config()
+            sub_lang = cfg.get("subtitle_language", "id")
+            flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
+            self.mascot.speech_bubble.show_message("くるくる～――っと！", "Kuru kuru~ Kururin!", flag, duration_ms=4000)
 
     def on_poke_mascot(self):
-        """Play instant pre-rendered poke voicelines with zero latency."""
+        """Play instant pre-rendered poke voicelines with authentic in-game kuru chances."""
         cfg = load_config()
         romance_style = cfg.get("romance_address_style", "sweet_wife")
         sub_lang = cfg.get("subtitle_language", "id")
+
+        # 35% chance to trigger iconic authentic in-game kuru kuru battle sound!
+        if random.random() < 0.35:
+            self.trigger_kuru()
+            return
 
         if romance_style == "yandere":
             poke_choices = [
@@ -1079,9 +1162,9 @@ class HertaTrayApp(QSystemTrayIcon):
         else:
             poke_choices = [
                 ("poke_sweet_1.wav",
-                 "クルクル〜クルリン！ちょっと、つつかないでよ！研究の邪魔なんだから！",
-                 "Kuru kuru~ Kururin! Hei, jangan dicolek-colek dong! Ganggu riset tahu!",
-                 "Kuru kuru~ Kururin! Hey, don't poke me! You're interrupting my research!"),
+                 "くるりんっ。ちょっと、つつかないでよ！研究の邪魔なんだから！",
+                 "Kururin! Hei, jangan dicolek-colek dong! Ganggu riset tahu!",
+                 "Kururin! Hey, don't poke me! You're interrupting my research!"),
                 ("poke_sweet_2.wav",
                  "ふふっ、何？私のこと構ってほしいの？…しょうがないわね〜♡",
                  "Fufu, apa sih? Mau kuperhatiin ya? ...Dasar manja deh~♡",

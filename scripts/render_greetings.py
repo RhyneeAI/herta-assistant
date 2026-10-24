@@ -1,10 +1,11 @@
 """
-Pre-render static greeting and poke voicelines using authentic Yamazaki Haruka RVC v2
-to eliminate speech synthesis latency in GUI and CLI sessions.
+Pre-render static greeting, wake, and poke voicelines using authentic in-game
+"Kuru kuru~" / "Kururin~" samples combined with Yamazaki Haruka RVC v2 dialogue.
 """
 
 import os
 import shutil
+import subprocess
 import sys
 
 from herta.config import AUDIO_DIR, TMP_DIR
@@ -12,38 +13,79 @@ from herta.rvc import convert_voice
 from herta.tts import synthesize_speech
 
 VOICELINES = {
-    "greeting_sweet_wife": "クルクル〜クルリン！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？",
-    "greeting_yandere": "クルクル〜クルリン…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？",
-    "greeting_casual": "クルクル〜クルリン！こんにちは、あなた！マダム・ヘルタよ。今日はどんな研究をするの？",
-    "poke_sweet_1": "クルクル〜クルリン！ちょっと、つつかないでよ！研究の邪魔なんだから！",
-    "poke_sweet_2": "ふふっ、何？私のこと構ってほしいの？…しょうがないわね〜♡",
-    "poke_yandere_1": "ねえ、あなた…触ってくれて嬉しいわ♡ でも…私以外の誰にも触れちゃダメよ？",
-    "poke_yandere_2": "ふふっ、そんなにつつかないで…抱きしめたくなっちゃうでしょう？♡",
+    "greeting_sweet_wife": {
+        "kuru_intro": "kuru_kuru.wav",
+        "dialogue": "ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
+    },
+    "greeting_yandere": {
+        "kuru_intro": "kuru_kururin.wav",
+        "dialogue": "…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
+    },
+    "greeting_casual": {
+        "kuru_intro": "kuru_kuru.wav",
+        "dialogue": "こんにちは、あなた！マダム・ヘルタよ。今日はどんな研究をするの？"
+    },
+    "poke_sweet_1": {
+        "kuru_intro": "kuru_kuruto.wav",
+        "dialogue": "ちょっと、つつかないでよ！研究の邪魔なんだから！"
+    },
+    "poke_sweet_2": {
+        "kuru_intro": None,
+        "dialogue": "ふふっ、何？私のこと構ってほしいの？…しょうがないわね〜♡"
+    },
+    "poke_yandere_1": {
+        "kuru_intro": None,
+        "dialogue": "ねえ、あなた…触ってくれて嬉しいわ♡ でも…私以外の誰にも触れちゃダメよ？"
+    },
+    "poke_yandere_2": {
+        "kuru_intro": None,
+        "dialogue": "ふふっ、そんなにつつかないで…抱きしめたくなっちゃうでしょう？♡"
+    },
+    "herta_wake": {
+        "kuru_intro": "kuru_kururin.wav",
+        "dialogue": "おかえり、あなた！さあ、研究の続きを始めましょう！"
+    }
 }
 
 
 def main():
-    print("💎 Pre-rendering authentic Yamazaki Haruka voicelines...")
+    print("💎 Rendering voicelines with authentic in-game Kuru Kuru samples + Yamazaki Haruka RVC...")
     os.makedirs(AUDIO_DIR, exist_ok=True)
 
-    for name, text in VOICELINES.items():
+    for name, item in VOICELINES.items():
+        kuru_intro = item["kuru_intro"]
+        dialogue = item["dialogue"]
         out_path = os.path.join(AUDIO_DIR, f"{name}.wav")
-        if os.path.exists(out_path) and os.path.getsize(out_path) > 10000:
-            print(f" • Skipping {name}.wav (already rendered)")
-            continue
 
-        print(f" • Synthesizing '{name}'...")
-        raw_wav = synthesize_speech(text)
+        print(f" • Synthesizing dialogue for '{name}'...")
+        raw_wav = synthesize_speech(dialogue)
         if not raw_wav or not os.path.exists(raw_wav):
             print(f" ⚠️ Failed to synthesize {name}")
             continue
 
         print(f" • Converting '{name}' with RVC v2 Yamazaki Haruka...")
         converted = convert_voice(raw_wav)
-        shutil.copyfile(converted, out_path)
-        print(f" ✅ Saved {out_path} ({os.path.getsize(out_path)} bytes)")
 
-    print("✨ All pre-rendered voicelines ready!")
+        if kuru_intro:
+            intro_path = os.path.join(AUDIO_DIR, kuru_intro)
+            if os.path.exists(intro_path):
+                print(f" • Merging authentic in-game sample '{kuru_intro}' with dialogue...")
+                cmd = [
+                    "ffmpeg", "-y",
+                    "-i", intro_path,
+                    "-i", converted,
+                    "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1[out]",
+                    "-map", "[out]",
+                    out_path
+                ]
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                print(f" ✅ Saved {out_path} ({os.path.getsize(out_path)} bytes) [Authentic Kuru + RVC]")
+                continue
+
+        shutil.copyfile(converted, out_path)
+        print(f" ✅ Saved {out_path} ({os.path.getsize(out_path)} bytes) [RVC]")
+
+    print("✨ All authentic voicelines successfully rendered!")
 
 
 if __name__ == "__main__":
