@@ -3,13 +3,19 @@ Desktop GUI Module for Madam Herta Assistant.
 Features:
 1. Floating Desktop Mascot:
    - Frameless, translucent, draggable anime mascot overlay.
+   - Native Wayland & X11 compositor drag-and-drop support.
    - Animated Madam Herta Kuru Kuru spinning animation.
    - Interactive Speech Bubble displaying Japanese voicelines & ID/EN subtitles.
-   - Click-to-poke reaction and push-to-talk microphone trigger.
-2. System Tray Applet:
-   - Persistent tray icon in OS taskbar.
-   - Quick menu: Show/Hide Mascot, Live Chat Window, Nudge, Romance Style,
-     Language Subtitles, Voice Conversion, and Quit.
+   - Instant pre-rendered poke voicelines (zero latency).
+2. Modern Interactive Chat Dialog:
+   - Widescreen 680x680 glassmorphism design.
+   - Header with Herta portrait, status, and one-click Romance/Language toggles.
+   - Interactive topic suggestion chips (quick prompts).
+   - Audio Replay button on every Herta response bubble.
+   - Strictly 2-line display: Japanese spoken text + chosen subtitle language (ID or EN).
+   - Instant pre-rendered greeting voicelines on startup.
+3. System Tray Applet:
+   - Persistent tray icon in OS taskbar with quick control menus.
 """
 
 import os
@@ -19,6 +25,7 @@ import threading
 import time
 
 from PyQt6.QtCore import (
+    QEvent,
     QPoint,
     QRect,
     QSize,
@@ -56,7 +63,7 @@ from PyQt6.QtWidgets import (
 from herta.audio import play_audio, record_microphone
 from herta.chat import build_system_prompt, generate_llm_reply, parse_reply, speak, transcribe_audio
 from herta.companion import BUILTIN_MOMENTS, generate_dynamic_moment
-from herta.config import ASSETS_DIR, load_config, save_config
+from herta.config import ASSETS_DIR, AUDIO_DIR, load_config, save_config
 
 HERTA_ICON_PATH = os.path.join(ASSETS_DIR, "images", "herta_avatar_64.png")
 HERTA_LARGE_ICON = os.path.join(ASSETS_DIR, "images", "herta_avatar_256.png")
@@ -65,7 +72,7 @@ HERTA_GIF_PATH = os.path.join(ASSETS_DIR, "images", "herta_kuru1.gif")
 
 class SpeechWorker(QThread):
     """Background worker for synthesizing and playing audio without freezing the GUI."""
-    finished_speaking = pyqtSignal()
+    finished_speaking = pyqtSignal(str)  # Emits audio path when ready
 
     def __init__(self, jp_text: str, rvc_enabled: bool = True):
         super().__init__()
@@ -73,11 +80,20 @@ class SpeechWorker(QThread):
         self.rvc_enabled = rvc_enabled
 
     def run(self):
+        audio_path = ""
         try:
-            speak(self.jp_text, rvc_enabled=self.rvc_enabled)
+            from herta.tts import synthesize_speech
+            from herta.rvc import convert_voice
+            raw = synthesize_speech(self.jp_text)
+            if raw and self.rvc_enabled:
+                audio_path = convert_voice(raw)
+            else:
+                audio_path = raw
+            if audio_path and os.path.exists(audio_path):
+                play_audio(audio_path)
         except Exception as exc:
             sys.stderr.write(f"GUI speak error: {exc}\n")
-        self.finished_speaking.emit()
+        self.finished_speaking.emit(audio_path)
 
 
 class ChatWorker(QThread):
@@ -120,7 +136,7 @@ class ChatWorker(QThread):
 
         try:
             reply_raw = generate_llm_reply(turns, system_prompt, api_key, chat_model)
-            reply_jp, reply_sub = parse_reply(reply_raw)
+            reply_jp, reply_sub = parse_reply(reply_raw, target_lang=sub_lang)
             self.reply_ready.emit(user_text, reply_jp, reply_sub)
         except Exception as exc:
             self.error_occurred.emit(f"LLM Error: {exc}")
@@ -193,8 +209,8 @@ class SpeechBubble(QFrame):
         super().__init__(parent)
         self.setStyleSheet("""
             QFrame {
-                background-color: rgba(20, 20, 32, 220);
-                border: 1px solid rgba(138, 92, 246, 160);
+                background-color: rgba(20, 20, 32, 230);
+                border: 1px solid rgba(138, 92, 246, 180);
                 border-radius: 14px;
                 padding: 10px;
             }
@@ -233,7 +249,10 @@ class SpeechBubble(QFrame):
 
 
 class FloatingMascot(QWidget):
-    """Frameless, transparent desktop mascot widget with drag-and-drop & animated GIF."""
+    """
+    Frameless, transparent desktop mascot widget with animated GIF
+    and smooth native Wayland & X11 drag-and-drop movement.
+    """
     poke_triggered = pyqtSignal()
     chat_requested = pyqtSignal()
     hide_requested = pyqtSignal()
@@ -241,10 +260,10 @@ class FloatingMascot(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.drag_position = QPoint()
+        self.drag_start_pos = QPoint()
+        self.drag_start_geo = QPoint()
         self.is_dragging = False
 
-        # Configure frameless & transparent overlay
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
@@ -254,6 +273,10 @@ class FloatingMascot(QWidget):
 
         self.init_ui()
         self.restore_position()
+
+        # Install event filter to capture clicks and drags across child elements
+        self.avatar_label.installEventFilter(self)
+        self.speech_bubble.installEventFilter(self)
 
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -279,7 +302,11 @@ class FloatingMascot(QWidget):
             self.avatar_label.setMovie(self.movie)
             self.movie.start()
         elif os.path.exists(HERTA_LARGE_ICON):
-            pix = QPixmap(HERTA_LARGE_ICON).scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            pix = QPixmap(HERTA_LARGE_ICON).scaled(
+                150, 150,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
             self.avatar_label.setPixmap(pix)
 
         layout.addWidget(self.avatar_label, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -288,8 +315,8 @@ class FloatingMascot(QWidget):
         self.toolbar = QFrame(self)
         self.toolbar.setStyleSheet("""
             QFrame {
-                background-color: rgba(18, 18, 28, 200);
-                border: 1px solid rgba(138, 92, 246, 120);
+                background-color: rgba(18, 18, 28, 220);
+                border: 1px solid rgba(138, 92, 246, 140);
                 border-radius: 12px;
                 padding: 2px 6px;
             }
@@ -302,7 +329,7 @@ class FloatingMascot(QWidget):
                 border-radius: 6px;
             }
             QPushButton:hover {
-                background-color: rgba(139, 92, 246, 100);
+                background-color: rgba(139, 92, 246, 120);
             }
         """)
         tb_layout = QHBoxLayout(self.toolbar)
@@ -332,27 +359,59 @@ class FloatingMascot(QWidget):
 
         layout.addWidget(self.toolbar, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    def mousePressEvent(self, event):
+    def eventFilter(self, watched, event):
+        if watched in [self.avatar_label, self.speech_bubble]:
+            if event.type() == QEvent.Type.MouseButtonPress:
+                self.handle_mouse_press(event)
+                return True
+            elif event.type() == QEvent.Type.MouseMove:
+                self.handle_mouse_move(event)
+                return True
+            elif event.type() == QEvent.Type.MouseButtonRelease:
+                self.handle_mouse_release(event)
+                return True
+            elif event.type() == QEvent.Type.ContextMenu:
+                self.contextMenuEvent(event)
+                return True
+        return super().eventFilter(watched, event)
+
+    def handle_mouse_press(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            self.drag_start_pos = event.globalPosition().toPoint()
+            self.drag_start_geo = self.pos()
             self.is_dragging = False
+
+            # Use Wayland/X11 compositor native drag when available
+            window = self.windowHandle()
+            if window and hasattr(window, "startSystemMove"):
+                window.startSystemMove()
             event.accept()
 
-    def mouseMoveEvent(self, event):
+    def handle_mouse_move(self, event):
         if event.buttons() == Qt.MouseButton.LeftButton:
-            self.is_dragging = True
-            new_pos = event.globalPosition().toPoint() - self.drag_position
-            self.move(new_pos)
+            delta = event.globalPosition().toPoint() - self.drag_start_pos
+            if delta.manhattanLength() > 6:
+                self.is_dragging = True
+                self.move(self.drag_start_geo + delta)
             event.accept()
 
-    def mouseReleaseEvent(self, event):
+    def handle_mouse_release(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            if not self.is_dragging:
-                # User clicked (poked) Madam Herta without dragging
+            dist = (event.globalPosition().toPoint() - self.drag_start_pos).manhattanLength()
+            if not self.is_dragging and dist < 8:
                 self.poke_triggered.emit()
             else:
                 self.save_position()
             event.accept()
+
+    def mousePressEvent(self, event):
+        self.handle_mouse_press(event)
+
+    def mouseMoveEvent(self, event):
+        self.handle_mouse_move(event)
+
+    def mouseReleaseEvent(self, event):
+        self.handle_mouse_release(event)
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
@@ -410,12 +469,17 @@ class FloatingMascot(QWidget):
 
 
 class ChatDialog(QDialog):
-    """Modern translucent glassmorphism Live Chat Window with Madam Herta."""
+    """
+    Interactive, widened Glassmorphism Live Chat Window with Madam Herta.
+    Features topic suggestion chips, audio replays, and instant greeting.
+    """
+    settings_changed = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Madam Herta - Live Chat")
-        self.resize(460, 520)
+        self.resize(680, 680)
+        self.setMinimumSize(560, 520)
         self.conversation_history = []
         self.speech_thread = None
         self.chat_thread = None
@@ -425,49 +489,135 @@ class ChatDialog(QDialog):
 
         self.setStyleSheet("""
             QDialog {
-                background-color: #161622;
+                background-color: #12121e;
                 color: #f1f5f9;
             }
             QScrollArea {
-                border: 1px solid #332d4b;
-                border-radius: 10px;
-                background-color: #1a1a2e;
+                border: 1px solid #2e284a;
+                border-radius: 12px;
+                background-color: #171728;
             }
             QLineEdit {
-                background-color: #24243e;
-                border: 1px solid #5b21b6;
-                border-radius: 8px;
-                padding: 8px 12px;
+                background-color: #212138;
+                border: 1px solid #6366f1;
+                border-radius: 10px;
+                padding: 10px 14px;
                 color: #ffffff;
                 font-size: 13px;
             }
             QLineEdit:focus {
                 border: 1px solid #8b5cf6;
+                background-color: #272744;
             }
-            QPushButton {
+            QPushButton#btn_send {
                 background-color: #7c3aed;
                 border: none;
-                border-radius: 8px;
+                border-radius: 10px;
                 color: #ffffff;
                 font-weight: bold;
-                padding: 8px 14px;
+                font-size: 13px;
+                padding: 10px 18px;
             }
-            QPushButton:hover {
+            QPushButton#btn_send:hover {
                 background-color: #6d28d9;
             }
             QPushButton#btn_mic {
-                background-color: #4338ca;
+                background-color: #4f46e5;
+                border: none;
+                border-radius: 10px;
+                color: #ffffff;
+                font-weight: bold;
+                padding: 10px 16px;
             }
             QPushButton#btn_mic:hover {
-                background-color: #3730a3;
+                background-color: #4338ca;
             }
         """)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
 
-        # Chat history container
+        # 1. Rich Header Bar
+        self.header_frame = QFrame(self)
+        self.header_frame.setStyleSheet("""
+            QFrame {
+                background-color: #1c1c30;
+                border: 1px solid #3b335c;
+                border-radius: 12px;
+                padding: 6px 10px;
+            }
+        """)
+        h_layout = QHBoxLayout(self.header_frame)
+        h_layout.setContentsMargins(8, 6, 8, 6)
+
+        # Herta Avatar Thumbnail
+        self.hdr_avatar = QLabel(self.header_frame)
+        self.hdr_avatar.setFixedSize(46, 46)
+        if os.path.exists(HERTA_ICON_PATH):
+            pix = QPixmap(HERTA_ICON_PATH).scaled(
+                44, 44,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.hdr_avatar.setPixmap(pix)
+        h_layout.addWidget(self.hdr_avatar)
+
+        # Title and status text
+        hdr_info = QVBoxLayout()
+        hdr_info.setSpacing(2)
+        lbl_title = QLabel("Madam Herta (ヘルタ)", self.header_frame)
+        lbl_title.setStyleSheet("font-size: 15px; font-weight: bold; color: #ffffff;")
+        self.lbl_subtitle = QLabel("🟢 Online • Genius Society #83", self.header_frame)
+        self.lbl_subtitle.setStyleSheet("font-size: 11px; color: #a78bfa;")
+        hdr_info.addWidget(lbl_title)
+        hdr_info.addWidget(self.lbl_subtitle)
+        h_layout.addLayout(hdr_info)
+
+        h_layout.addStretch()
+
+        # One-click Romance Switcher Badge
+        self.btn_toggle_style = QPushButton(self.header_frame)
+        self.btn_toggle_style.setStyleSheet("""
+            QPushButton {
+                background-color: #2d1d4d;
+                border: 1px solid #7c3aed;
+                border-radius: 8px;
+                color: #e9d5ff;
+                padding: 6px 10px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #432874;
+            }
+        """)
+        self.btn_toggle_style.clicked.connect(self.on_toggle_romance_style)
+        h_layout.addWidget(self.btn_toggle_style)
+
+        # One-click Language Switcher Badge
+        self.btn_toggle_lang = QPushButton(self.header_frame)
+        self.btn_toggle_lang.setStyleSheet("""
+            QPushButton {
+                background-color: #1e293b;
+                border: 1px solid #64748b;
+                border-radius: 8px;
+                color: #cbd5e1;
+                padding: 6px 10px;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #334155;
+            }
+        """)
+        self.btn_toggle_lang.clicked.connect(self.on_toggle_subtitle_lang)
+        h_layout.addWidget(self.btn_toggle_lang)
+
+        layout.addWidget(self.header_frame)
+        self.update_header_badges()
+
+        # 2. Chat history container
         self.scroll_area = QScrollArea(self)
         self.scroll_area.setWidgetResizable(True)
         self.history_widget = QWidget()
@@ -477,18 +627,55 @@ class ChatDialog(QDialog):
         self.scroll_area.setWidget(self.history_widget)
         layout.addWidget(self.scroll_area)
 
-        # Status label
+        # 3. Interactive Quick Topic Suggestions (Chips)
+        chips_frame = QFrame(self)
+        chips_layout = QHBoxLayout(chips_frame)
+        chips_layout.setContentsMargins(0, 0, 0, 0)
+        chips_layout.setSpacing(6)
+
+        chips_data = [
+            ("☕ Minta Semangat", "ねえ、ヘルタ。私に元気をちょうだい！"),
+            ("💧 Ingatkan Minum", "ちゃんと休憩と水分補給してる？"),
+            ("🔬 Riset Hari Ini", "今日の研究成果はどうかしら？"),
+            ("✨ Colek Herta", "クルクル〜クルリン！"),
+            ("❤️ Cek Sayang", "私のこと、どれくらい愛してるの？"),
+        ]
+
+        for label, prompt_text in chips_data:
+            btn_chip = QPushButton(label, chips_frame)
+            btn_chip.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(99, 102, 241, 40);
+                    border: 1px solid rgba(129, 140, 248, 120);
+                    border-radius: 12px;
+                    color: #e0e7ff;
+                    font-size: 11px;
+                    padding: 4px 10px;
+                }
+                QPushButton:hover {
+                    background-color: rgba(99, 102, 241, 100);
+                    color: #ffffff;
+                }
+            """)
+            btn_chip.clicked.connect(lambda checked, text=prompt_text: self.send_to_herta(text, is_voice=False))
+            chips_layout.addWidget(btn_chip)
+
+        chips_layout.addStretch()
+        layout.addWidget(chips_frame)
+
+        # 4. Status label
         self.status_label = QLabel("✨ Ready to converse with Madam Herta", self)
-        self.status_label.setStyleSheet("color: #a78bfa; font-size: 11px;")
+        self.status_label.setStyleSheet("color: #a78bfa; font-size: 11px; padding-left: 4px;")
         layout.addWidget(self.status_label)
 
-        # Input row
+        # 5. Input row
         input_row = QHBoxLayout()
         self.input_field = QLineEdit(self)
-        self.input_field.setPlaceholderText("Type a message or press Enter to speak...")
+        self.input_field.setPlaceholderText("Type a message or click 🎤 Mic to speak...")
         self.input_field.returnPressed.connect(self.on_send_text)
 
         self.btn_send = QPushButton("Send", self)
+        self.btn_send.setObjectName("btn_send")
         self.btn_send.clicked.connect(self.on_send_text)
 
         self.btn_mic = QPushButton("🎤 Mic", self)
@@ -502,18 +689,54 @@ class ChatDialog(QDialog):
 
         self.add_initial_greeting()
 
-    def add_bubble(self, sender: str, text: str, sub: str = "", flag: str = ""):
+    def update_header_badges(self):
+        cfg = load_config()
+        style = cfg.get("romance_address_style", "sweet_wife")
+        lang = cfg.get("subtitle_language", "id")
+
+        if style == "yandere":
+            self.btn_toggle_style.setText("🖤 Yandere Mode")
+        else:
+            self.btn_toggle_style.setText("❤️ Sweet Wife Mode")
+
+        if lang == "en":
+            self.btn_toggle_lang.setText("🇬🇧 English")
+        else:
+            self.btn_toggle_lang.setText("🇮🇩 Bahasa Indonesia")
+
+    def on_toggle_romance_style(self):
+        cfg = load_config()
+        new_style = "sweet_wife" if cfg.get("romance_address_style", "sweet_wife") == "yandere" else "yandere"
+        cfg["romance_address_style"] = new_style
+        save_config(cfg)
+        self.update_header_badges()
+        self.settings_changed.emit()
+
+    def on_toggle_subtitle_lang(self):
+        cfg = load_config()
+        new_lang = "en" if cfg.get("subtitle_language", "id") == "id" else "id"
+        cfg["subtitle_language"] = new_lang
+        save_config(cfg)
+        self.update_header_badges()
+        self.settings_changed.emit()
+
+    def add_bubble(self, sender: str, text: str, sub: str = "", flag: str = "", audio_file: str = ""):
+        """
+        Render cleanly styled chat bubble:
+        Strictly displays Japanese spoken text and the chosen subtitle language.
+        Includes a 🔊 Replay button on Herta's voicelines.
+        """
         bubble = QFrame(self.history_widget)
-        is_user = sender != "Madam Herta"
-        bg = "#2e1065" if not is_user else "#1e293b"
+        is_user = (sender != "Madam Herta")
+        bg = "#29134a" if not is_user else "#1e293b"
         border = "#7c3aed" if not is_user else "#475569"
 
         bubble.setStyleSheet(f"""
             QFrame {{
                 background-color: {bg};
                 border: 1px solid {border};
-                border-radius: 10px;
-                padding: 8px 12px;
+                border-radius: 12px;
+                padding: 10px 14px;
             }}
             QLabel {{
                 color: #ffffff;
@@ -522,21 +745,45 @@ class ChatDialog(QDialog):
         """)
         b_layout = QVBoxLayout(bubble)
         b_layout.setContentsMargins(6, 4, 6, 4)
-        b_layout.setSpacing(2)
+        b_layout.setSpacing(4)
 
+        # Header of bubble
+        top_row = QHBoxLayout()
         lbl_sender = QLabel(f"<b>{sender}</b>", bubble)
-        lbl_sender.setStyleSheet("color: #c084fc; font-size: 11px;")
-        b_layout.addWidget(lbl_sender)
+        lbl_sender.setStyleSheet("color: #c084fc; font-size: 11px;" if not is_user else "color: #94a3b8; font-size: 11px;")
+        top_row.addWidget(lbl_sender)
+        top_row.addStretch()
+
+        if not is_user and audio_file and os.path.exists(audio_file):
+            btn_replay = QPushButton("🔊 Replay", bubble)
+            btn_replay.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(124, 58, 237, 60);
+                    border: 1px solid #7c3aed;
+                    border-radius: 6px;
+                    color: #e9d5ff;
+                    font-size: 10px;
+                    padding: 2px 8px;
+                }
+                QPushButton:hover {
+                    background-color: #7c3aed;
+                    color: #ffffff;
+                }
+            """)
+            btn_replay.clicked.connect(lambda checked, p=audio_file: threading.Thread(target=play_audio, args=(p,), daemon=True).start())
+            top_row.addWidget(btn_replay)
+
+        b_layout.addLayout(top_row)
 
         lbl_main = QLabel(text, bubble)
         lbl_main.setWordWrap(True)
-        lbl_main.setStyleSheet("color: #f8fafc; font-size: 13px;")
+        lbl_main.setStyleSheet("color: #f8fafc; font-size: 13px; font-weight: 500;")
         b_layout.addWidget(lbl_main)
 
         if sub:
             lbl_sub = QLabel(f"{flag} {sub}", bubble)
             lbl_sub.setWordWrap(True)
-            lbl_sub.setStyleSheet("color: #cbd5e1; font-size: 11px; font-style: italic;")
+            lbl_sub.setStyleSheet("color: #cbd5e1; font-size: 12px; font-style: italic;")
             b_layout.addWidget(lbl_sub)
 
         self.history_layout.addWidget(bubble)
@@ -553,18 +800,37 @@ class ChatDialog(QDialog):
 
         if romance_mode:
             if romance_style == "yandere":
-                jp = "クルクル〜クルリン…ふふっ、やっと来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
-                sub = "Kuru kuru~ Kururin... Fufu, you've finally come, darling...♡ I've been waiting for you forever, you know...?" if sub_lang == "en" else "Kuru kuru~ Kururin... Fufu, akhirnya kamu datang juga, sayangku...♡ Dari tadi nungguin kamu tahu...?"
+                greeting_audio = os.path.join(AUDIO_DIR, "greeting_yandere.wav")
+                jp = "クルクル〜クルリン…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
+                sub = (
+                    "Kuru kuru~ Kururin... Fufu, you've finally come to see me, darling...♡ I've been waiting for you forever, you know...?"
+                    if sub_lang == "en" else
+                    "Kuru kuru~ Kururin... Fufu, akhirnya kamu datang juga menemuiku, sayangku...♡ Dari tadi aku nungguin kamu terus tahu...?"
+                )
             else:
+                greeting_audio = os.path.join(AUDIO_DIR, "greeting_sweet_wife.wav")
                 jp = "クルクル〜クルリン！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
-                sub = "Kuru kuru~ Kururin! Hey darling... I'm so glad to see you today. What shall we do together?" if sub_lang == "en" else "Kuru kuru~ Kururin! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
+                sub = (
+                    "Kuru kuru~ Kururin! Hey darling... I'm so glad to see you today. What shall we do together?"
+                    if sub_lang == "en" else
+                    "Kuru kuru~ Kururin! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
+                )
         else:
+            greeting_audio = os.path.join(AUDIO_DIR, "greeting_casual.wav")
             jp = f"クルクル〜クルリン！こんにちは、{partner}！マダム・ヘルタよ。今日はどんな研究をするの？"
-            sub = f"Kuru kuru~ Kururin! Hello, {partner}! Madam Herta here. What research are we tackling today?" if sub_lang == "en" else f"Kuru kuru~ Kururin! Halo, {partner}! Madam Herta di sini. Hari ini mau teliti apa?"
+            sub = (
+                f"Kuru kuru~ Kururin! Hello, {partner}! Madam Herta here. What research are we tackling today?"
+                if sub_lang == "en" else
+                f"Kuru kuru~ Kururin! Halo, {partner}! Madam Herta di sini. Hari ini mau teliti apa?"
+            )
 
         flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
-        self.add_bubble("Madam Herta", jp, sub, flag)
+        self.add_bubble("Madam Herta", jp, sub, flag, audio_file=greeting_audio)
         self.conversation_history.append({"role": "model", "text": f"JP: {jp}\nSUB: {sub}"})
+
+        # Instant zero-latency pre-rendered greeting playback
+        if os.path.exists(greeting_audio):
+            threading.Thread(target=play_audio, args=(greeting_audio,), daemon=True).start()
 
     def on_send_text(self):
         text = self.input_field.text().strip()
@@ -581,7 +847,7 @@ class ChatDialog(QDialog):
 
     def send_to_herta(self, user_text: str, is_voice: bool):
         cfg = load_config()
-        self.status_label.setText("⏳ Madam Herta is thinking...")
+        self.status_label.setText("⏳ Madam Herta is formulating a brilliant response... ✨")
         self.btn_send.setEnabled(False)
         self.btn_mic.setEnabled(False)
 
@@ -598,16 +864,20 @@ class ChatDialog(QDialog):
         flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
 
         self.add_bubble(partner, user_text)
-        self.add_bubble("Madam Herta", reply_jp, reply_sub, flag)
 
         self.conversation_history.append({"role": "user", "text": user_text})
         self.conversation_history.append({"role": "model", "text": f"JP: {reply_jp}\nSUB: {reply_sub}"})
 
         self.status_label.setText("🔊 Madam Herta is speaking...")
         self.speech_thread = SpeechWorker(reply_jp, rvc_enabled=rvc_enabled)
-        self.speech_thread.finished_speaking.connect(lambda: self.status_label.setText("✨ Ready"))
+        self.speech_thread.finished_speaking.connect(
+            lambda audio_path: self.on_speech_finished(reply_jp, reply_sub, flag, audio_path)
+        )
         self.speech_thread.start()
 
+    def on_speech_finished(self, reply_jp: str, reply_sub: str, flag: str, audio_path: str):
+        self.add_bubble("Madam Herta", reply_jp, reply_sub, flag, audio_file=audio_path)
+        self.status_label.setText("✨ Ready")
         self.btn_send.setEnabled(True)
         self.btn_mic.setEnabled(True)
 
@@ -736,6 +1006,21 @@ class HertaTrayApp(QSystemTrayIcon):
         self.mascot.hide_requested.connect(self.hide_mascot)
         self.mascot.quit_requested.connect(self.quit_app)
         self.companion_thread.moment_triggered.connect(self.on_companion_moment)
+        self.chat_dialog.settings_changed.connect(self.sync_settings_from_dialog)
+
+    def sync_settings_from_dialog(self):
+        cfg = load_config()
+        current_style = cfg.get("romance_address_style", "sweet_wife")
+        current_lang = cfg.get("subtitle_language", "id")
+        if current_style == "yandere":
+            self.act_yandere.setChecked(True)
+        else:
+            self.act_sweet.setChecked(True)
+
+        if current_lang == "en":
+            self.act_lang_en.setChecked(True)
+        else:
+            self.act_lang_id.setChecked(True)
 
     def on_tray_activated(self, reason):
         if reason in [QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick]:
@@ -786,42 +1071,46 @@ class HertaTrayApp(QSystemTrayIcon):
         threading.Thread(target=speak, args=(jp,), kwargs={"rvc_enabled": rvc_enabled}, daemon=True).start()
 
     def on_poke_mascot(self):
+        """Play instant pre-rendered poke voicelines with zero latency."""
         cfg = load_config()
-        partner = cfg.get("partner_name", "あなた")
         romance_style = cfg.get("romance_address_style", "sweet_wife")
         sub_lang = cfg.get("subtitle_language", "id")
-        rvc_enabled = cfg.get("rvc_enabled", True)
 
         if romance_style == "yandere":
-            pokes = [
-                ("ねえ、あなた…触ってくれて嬉しいわ♡ でも…私以外の誰にも触れちゃダメよ？",
+            poke_choices = [
+                ("poke_yandere_1.wav",
+                 "ねえ、あなた…触ってくれて嬉しいわ♡ でも…私以外の誰にも触れちゃダメよ？",
                  "Hei sayang... senang deh kamu sentuh♡ Tapi... kamu nggak boleh nyentuh siapapun selain aku ya?",
                  "Hey darling... I'm happy you touched me♡ But... don't you ever dare touch anyone else, okay?"),
-                ("ふふっ、そんなにつつかないで…抱きしめたくなっちゃうでしょう？♡",
+                ("poke_yandere_2.wav",
+                 "ふふっ、そんなにつつかないで…抱きしめたくなっちゃうでしょう？♡",
                  "Fufu, jangan dicolek terus dong... nanti aku jadi pengen meluk kamu terus kan?♡",
                  "Fufu, don't poke me so much... you'll just make me want to hold you tight forever♡")
             ]
         else:
-            pokes = [
-                ("クルクル〜クルリン！ちょっと、つつかないでよ！研究の邪魔なんだから！",
+            poke_choices = [
+                ("poke_sweet_1.wav",
+                 "クルクル〜クルリン！ちょっと、つつかないでよ！研究の邪魔なんだから！",
                  "Kuru kuru~ Kururin! Hei, jangan dicolek-colek dong! Ganggu riset tahu!",
                  "Kuru kuru~ Kururin! Hey, don't poke me! You're interrupting my research!"),
-                ("ふふっ、何？私のこと構ってほしいの？…しょうがないわね〜♡",
+                ("poke_sweet_2.wav",
+                 "ふふっ、何？私のこと構ってほしいの？…しょうがないわね〜♡",
                  "Fufu, apa sih? Mau kuperhatiin ya? ...Dasar manja deh~♡",
                  "Fufu, what is it? Do you want my attention? ...You're so spoiled~♡")
             ]
 
-        chosen_poke = random.choice(pokes)
-        jp = chosen_poke[0]
-        if sub_lang == "en":
-            flag = "🇬🇧"
-            sub = chosen_poke[2]
-        else:
-            flag = "🇮🇩"
-            sub = chosen_poke[1]
+        chosen = random.choice(poke_choices)
+        audio_name, jp, id_sub, en_sub = chosen
+        sub = en_sub if sub_lang == "en" else id_sub
+        flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
 
         self.mascot.speech_bubble.show_message(jp, sub, flag, duration_ms=6000)
-        threading.Thread(target=speak, args=(jp,), kwargs={"rvc_enabled": rvc_enabled}, daemon=True).start()
+
+        poke_wav = os.path.join(AUDIO_DIR, audio_name)
+        if os.path.exists(poke_wav):
+            threading.Thread(target=play_audio, args=(poke_wav,), daemon=True).start()
+        else:
+            threading.Thread(target=speak, args=(jp,), kwargs={"rvc_enabled": cfg.get("rvc_enabled", True)}, daemon=True).start()
 
     def on_companion_moment(self, jp: str, sub: str, flag: str):
         if self.mascot.isVisible():
@@ -831,11 +1120,13 @@ class HertaTrayApp(QSystemTrayIcon):
         cfg = load_config()
         cfg["romance_address_style"] = style
         save_config(cfg)
+        self.chat_dialog.update_header_badges()
 
     def set_subtitle_lang(self, lang: str):
         cfg = load_config()
         cfg["subtitle_language"] = lang
         save_config(cfg)
+        self.chat_dialog.update_header_badges()
 
     def toggle_rvc(self):
         cfg = load_config()

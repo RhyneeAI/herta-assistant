@@ -11,7 +11,7 @@ import sys
 import urllib.request
 
 from herta.audio import play_audio, record_microphone
-from herta.config import load_config, save_config
+from herta.config import AUDIO_DIR, load_config, save_config
 from herta.rvc import convert_voice, get_rvc_loader
 from herta.tts import synthesize_speech
 
@@ -69,9 +69,9 @@ def build_system_prompt(
             f"You are speaking to your husband and partner '{partner_name}'.\n\n"
             f"{persona_block}\n\n"
             "STRICT OUTPUT FORMAT:\n"
-            "Your reply MUST ALWAYS follow this exact 2-line format:\n"
-            "JP: <Intimate, natural, and expressive Japanese spoken by Herta>\n"
-            f"{sub_desc}\n\n"
+            "Output EXACTLY 2 lines. Do NOT output translations in any other languages.\n"
+            "Line 1 MUST be JP: <Intimate Japanese spoken by Herta>\n"
+            f"Line 2 MUST be {sub_desc}\n\n"
             "Example:\n"
             "JP: ねえ、あなた…今日も頑張っててえらいわね。ふふっ、私の自慢の旦那様なんだから！\n"
             f"{sub_example}"
@@ -87,13 +87,14 @@ def build_system_prompt(
             f"- Address the user as '{partner_name}'.\n"
             "- Keep replies concise (1 to 2 sentences).\n\n"
             "STRICT OUTPUT FORMAT:\n"
-            "JP: <Natural, expressive Japanese spoken by Herta>\n"
-            f"{sub_desc}"
+            "Output EXACTLY 2 lines. Do NOT output translations in other languages.\n"
+            "Line 1 MUST be JP: <Natural, expressive Japanese spoken by Herta>\n"
+            f"Line 2 MUST be {sub_desc}"
         )
 
 
-def parse_reply(text: str):
-    """Separate Japanese spoken line and subtitle translation."""
+def parse_reply(text: str, target_lang: str = "id"):
+    """Separate Japanese spoken line and subtitle translation for target language."""
     jp = ""
     sub = ""
     for line in text.strip().splitlines():
@@ -103,7 +104,9 @@ def parse_reply(text: str):
             jp = line_clean[3:].strip()
         elif upper.startswith("SUB:"):
             sub = line_clean[4:].strip()
-        elif upper.startswith("ID:") or upper.startswith("EN:"):
+        elif target_lang == "id" and upper.startswith("ID:"):
+            sub = line_clean[3:].strip()
+        elif target_lang == "en" and upper.startswith("EN:"):
             sub = line_clean[3:].strip()
 
     if not jp:
@@ -227,6 +230,7 @@ def start_chat(fast_mode: bool = False):
 
     if romance_mode:
         if romance_style == "yandere":
+            greeting_audio = os.path.join(AUDIO_DIR, "greeting_yandere.wav")
             greeting_jp = "クルクル〜クルリン…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
             greeting_sub = (
                 "Kuru kuru~ Kururin... Fufu, you've finally come to see me, darling...♡ I've been waiting for you forever, you know...?"
@@ -234,6 +238,7 @@ def start_chat(fast_mode: bool = False):
                 "Kuru kuru~ Kururin... Fufu, akhirnya kamu datang juga menemuiku, sayangku...♡ Dari tadi aku nungguin kamu terus tahu...?"
             )
         else:
+            greeting_audio = os.path.join(AUDIO_DIR, "greeting_sweet_wife.wav")
             greeting_jp = "クルクル〜クルリン！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
             greeting_sub = (
                 "Kuru kuru~ Kururin! Hey darling... I'm so glad to see you today. What shall we do together?"
@@ -241,6 +246,7 @@ def start_chat(fast_mode: bool = False):
                 "Kuru kuru~ Kururin! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
             )
     else:
+        greeting_audio = os.path.join(AUDIO_DIR, "greeting_casual.wav")
         greeting_jp = f"クルクル〜クルリン！こんにちは、{partner}！マダム・ヘルタよ。今日はどんな研究をするの？"
         greeting_sub = (
             f"Kuru kuru~ Kururin! Hello, {partner}! Madam Herta here. What research are we tackling today?"
@@ -253,7 +259,10 @@ def start_chat(fast_mode: bool = False):
     print(f"   🇯🇵 「{greeting_jp}」")
     print(f"   {sub_flag} ({greeting_sub})\n")
 
-    speak(greeting_jp, rvc_enabled=rvc_active)
+    if os.path.exists(greeting_audio):
+        play_audio(greeting_audio)
+    else:
+        speak(greeting_jp, rvc_enabled=rvc_active)
 
     conversation_history = [{"role": "model", "text": f"JP: {greeting_jp}\nSUB: {greeting_sub}"}]
     system_prompt = build_system_prompt(partner, romance_mode=romance_mode, romance_style=romance_style, subtitle_lang=sub_lang)
@@ -356,7 +365,7 @@ def start_chat(fast_mode: bool = False):
 
         print("⏳ Madam Herta is thinking...")
         reply_raw = generate_llm_reply(conversation_history, system_prompt, api_key, chat_model)
-        reply_jp, reply_sub = parse_reply(reply_raw)
+        reply_jp, reply_sub = parse_reply(reply_raw, target_lang=sub_lang)
 
         print(f"\n🤖 Madam Herta:")
         print(f"   🇯🇵 「{reply_jp}」")
