@@ -27,14 +27,16 @@ def get_time_slot_key() -> str:
 def trigger_greeting():
     """Execute startup voice greeting."""
     cfg = load_config()
-    partner_name = cfg.get("partner_name", "Rinne")
+    partner_name = cfg.get("partner_name", "あなた")
+    sub_lang = cfg.get("subtitle_language", "id")
     key = get_time_slot_key()
 
     audio_file = os.path.join(AUDIO_DIR, f"{key}.wav")
     meta_file = os.path.join(AUDIO_DIR, "voicelines.json")
 
     jp_text = f"クルクル〜クルリン！こんにちは、{partner_name}！マダム・ヘルタよ。"
-    id_text = f"Kuru kuru~ Kururin! Halo, {partner_name}! Madam Herta di sini."
+    sub_text = f"Kuru kuru~ Kururin! Halo, {partner_name}! Madam Herta di sini."
+    flag = "🇮🇩"
 
     if os.path.exists(meta_file):
         try:
@@ -42,12 +44,17 @@ def trigger_greeting():
                 meta = json.load(f)
                 if key in meta:
                     jp_text = meta[key].get("jp", jp_text).replace("リンネ", partner_name)
-                    id_text = meta[key].get("id", id_text).replace("Rinne", partner_name)
+                    if sub_lang == "en":
+                        sub_text = meta[key].get("en", "").replace("Rinne", partner_name)
+                        flag = "🇬🇧"
+                    else:
+                        sub_text = meta[key].get("id", "").replace("Rinne", partner_name)
+                        flag = "🇮🇩"
         except Exception:
             pass
 
     # Display notification banner with subtitles
-    show_notification(f"💎 Madam Herta: {jp_text}", f"🇮🇩 {id_text}")
+    show_notification(f"💎 Madam Herta: {jp_text}", f"{flag} {sub_text}")
 
     # Play authentic Yamazaki Haruka audio
     if os.path.exists(audio_file):

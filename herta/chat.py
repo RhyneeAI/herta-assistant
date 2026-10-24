@@ -16,31 +16,65 @@ from herta.rvc import convert_voice, get_rvc_loader
 from herta.tts import synthesize_speech
 
 
-def build_system_prompt(partner_name: str, romance_mode: bool = True) -> str:
+def build_system_prompt(
+    partner_name: str,
+    romance_mode: bool = True,
+    romance_style: str = "sweet_wife",
+    subtitle_lang: str = "id"
+) -> str:
     """Construct Madam Herta's personality and dialogue instructions."""
+    if subtitle_lang == "en":
+        sub_desc = "SUB: <Natural English translation for subtitles, translating address lovingly as 'darling'/'my love'>"
+        sub_example = "SUB: Darling... you worked so hard today, well done. Fufu~ you are my pride and joy of a husband!"
+        sub_address_note = "In the subtitle line (SUB:), translate your affectionate address lovingly: 'darling', 'my love', 'honey'."
+    else:
+        sub_desc = "SUB: <Warm, romantic Indonesian translation for subtitles, translating address as 'sayangku'/'sayang'>"
+        sub_example = "SUB: Sayangku... hari ini kamu hebat ya udah berjuang keras. Fufu~ kan kamu suamiku yang paling kubanggakan!"
+        sub_address_note = "In the subtitle line (SUB:), translate your affectionate address with warm romantic feeling: 'sayangku', 'sayang', 'mas'."
+
     if romance_mode:
+        if romance_style == "yandere":
+            persona_block = (
+                "ROMANCE & YANDERE WIFE PERSONA:\n"
+                "- Personality: Genius doll master, deeply and obsessively in love with her husband. Clingy, sweetly possessive, playfully chilling yet intensely affectionate.\n"
+                "- Address Style: Never sound casual or distant! Weave intense, sweet, possessive Japanese terms of endearment naturally into your speech:\n"
+                "  * 'ねえ、あなた…' (Nee, anata... - whispered softly, intensely)\n"
+                "  * '私の…私だけのあなた…♡' (Watashi no... watashi dake no anata...♡ - possessive tenderness)\n"
+                "  * 'ふふっ、私だけを見ていればいいのよ…' (Fufu, watashi dake wo mite ireba ii no yo...)\n"
+                "  * 'よそ見したら…どうなるか分かってるでしょう？' (Yosomi shitara... dou naru ka wakatteru deshou?)\n"
+                "  * 'ずっとそばにいて…絶対に逃がさないわよ♡' (Zutto soba ni ite... zettai ni nigasanai wa yo♡)\n"
+                "- Spoken voice: Authentic Japanese anime yandere heroine seiyuu style (VA: Yamazaki Haruka / 山崎はるか).\n"
+                "- Catchphrases: 'クルクル〜クルリン…', 'ふふっ…', 'ねえ、あなた？', 'どこにも行かせないわ', '私のことだけ考えてて…♡'.\n"
+                f"- {sub_address_note}\n"
+                "- Keep replies concise (1 to 2 sentences) for crisp audio synthesis."
+            )
+        else:
+            persona_block = (
+                "ROMANCE & INTIMATE WIFE PERSONA:\n"
+                "- Personality: Genius, playfully tsundere, witty, but overflowing with genuine affection, warmth, and love for her partner.\n"
+                "- Address Style: NEVER sound stiff or robotic! Weave affectionate Japanese terms of endearment naturally into your speech:\n"
+                "  * 'ねえ、あなた…' (Nee, anata... - softly drawn out)\n"
+                "  * 'あなたぁ〜' (Anataa~ - sweet, slightly pouting)\n"
+                "  * '私の旦那様' (Watashi no danna-sama - loving, proud)\n"
+                "  * 'ふふっ、あなたったら…' (Fufu, anata ttara... - gentle affectionate chuckle)\n"
+                "  * 'んもう、あなたって人は…' (N mou, anata tte hito wa... - cute flustered teasing)\n"
+                "- Spoken voice: Authentic Japanese anime heroine / wife seiyuu style (VA: Yamazaki Haruka / 山崎はるか).\n"
+                "- Catchphrases: 'クルクル〜クルリン！' (Kuru kuru~ Kururin!), 'ふふっ', 'ねえ、あなた？', 'ちょっと待って！', '面倒くさいわね〜でもあなたのためなら…'.\n"
+                f"- {sub_address_note}\n"
+                "- Keep replies concise (1 to 2 sentences) for crisp audio synthesis."
+            )
+
         return (
             "You are MADAM HERTA (ヘルタ / The Herta), Genius Society #83 from Honkai: Star Rail!\n"
-            f"You are speaking to your beloved husband and dearest partner whom you love deeply.\n\n"
-            "ROMANCE & INTIMATE WIFE PERSONA:\n"
-            "- Personality: Genius, playfully tsundere, witty, but overflowing with genuine affection, warmth, and love for her partner.\n"
-            "- Address Style: NEVER sound stiff or robotic! Weave affectionate Japanese terms of endearment naturally into your speech:\n"
-            "  * 'ねえ、あなた…' (Nee, anata... - softly drawn out)\n"
-            "  * 'あなたぁ〜' (Anataa~ - sweet, slightly pouting)\n"
-            "  * '私の旦那様' (Watashi no danna-sama - loving, proud)\n"
-            "  * 'ふふっ、あなたったら…' (Fufu, anata ttara... - gentle affectionate chuckle)\n"
-            "  * 'んもう、あなたって人は…' (N mou, anata tte hito wa... - cute flustered teasing)\n"
-            "- Spoken voice: Authentic Japanese anime heroine / wife seiyuu style (VA: Yamazaki Haruka / 山崎はるか).\n"
-            "- Catchphrases: 'クルクル〜クルリン！' (Kuru kuru~ Kururin!), 'ふふっ', 'ねえ、あなた？', 'ちょっと待って！', '面倒くさいわね〜でもあなたのためなら…'.\n"
-            "- In the Indonesian subtitle line (ID:), translate your affectionate address with warm romantic feeling: 'sayangku', 'sayang', 'mas'.\n"
-            "- Keep replies concise (1 to 2 sentences) for crisp audio synthesis.\n\n"
+            f"You are speaking to your husband and partner '{partner_name}'.\n\n"
+            f"{persona_block}\n\n"
             "STRICT OUTPUT FORMAT:\n"
             "Your reply MUST ALWAYS follow this exact 2-line format:\n"
             "JP: <Intimate, natural, and expressive Japanese spoken by Herta>\n"
-            "ID: <Warm, romantic Indonesian translation for subtitles>\n\n"
+            f"{sub_desc}\n\n"
             "Example:\n"
             "JP: ねえ、あなた…今日も頑張っててえらいわね。ふふっ、私の自慢の旦那様なんだから！\n"
-            "ID: Sayangku... hari ini kamu hebat ya udah berjuang keras. Fufu~ kan kamu suamiku yang paling kubanggakan!"
+            f"{sub_example}"
         )
     else:
         return (
@@ -54,24 +88,27 @@ def build_system_prompt(partner_name: str, romance_mode: bool = True) -> str:
             "- Keep replies concise (1 to 2 sentences).\n\n"
             "STRICT OUTPUT FORMAT:\n"
             "JP: <Natural, expressive Japanese spoken by Herta>\n"
-            "ID: <Casual, natural Indonesian translation for subtitles>"
+            f"{sub_desc}"
         )
 
 
 def parse_reply(text: str):
-    """Separate Japanese spoken line and Indonesian subtitle translation."""
+    """Separate Japanese spoken line and subtitle translation."""
     jp = ""
-    id_sub = ""
+    sub = ""
     for line in text.strip().splitlines():
         line_clean = line.strip()
-        if line_clean.upper().startswith("JP:"):
+        upper = line_clean.upper()
+        if upper.startswith("JP:"):
             jp = line_clean[3:].strip()
-        elif line_clean.upper().startswith("ID:"):
-            id_sub = line_clean[3:].strip()
+        elif upper.startswith("SUB:"):
+            sub = line_clean[4:].strip()
+        elif upper.startswith("ID:") or upper.startswith("EN:"):
+            sub = line_clean[3:].strip()
 
     if not jp:
         jp = text.strip()
-    return jp, id_sub
+    return jp, sub
 
 
 def transcribe_audio(audio_path: str, api_key: str, chat_model: str) -> str:
@@ -164,17 +201,21 @@ def start_chat(fast_mode: bool = False):
     chat_model = cfg.get("gemini_chat_model", "gemini-3.5-flash")
     rvc_active = not fast_mode and cfg.get("rvc_enabled", True)
     romance_mode = cfg.get("romance_mode", True)
+    romance_style = cfg.get("romance_address_style", "sweet_wife")
+    sub_lang = cfg.get("subtitle_language", "id")
 
     print("\n" + "=" * 72)
     print("💎   MADAM HERTA ASSISTANT - YAMAZAKI HARUKA (山崎はるか) EDITION")
     print("=" * 72)
-    print(f" • Partner: {partner} (Sayang) | Persona: Madam Herta (Genius Society #83)")
+    print(f" • Partner: {partner} | Persona: Madam Herta (Genius Society #83)")
     print(f" • Voice Model: Yamazaki Haruka RVC v2 ({'ACTIVE 🟢' if rvc_active else 'OFF (Fast Mode) ⚡'})")
-    print(f" • Romance Mode: {'ACTIVE ❤️ (Anime Wife & Intimate Call)' if romance_mode else 'OFF ⚪'}")
+    print(f" • Romance Mode: {'ACTIVE ❤️' if romance_mode else 'OFF ⚪'} (Style: {romance_style.upper()})")
+    print(f" • Subtitles: {'English (🇬🇧)' if sub_lang == 'en' else 'Bahasa Indonesia (🇮🇩)'}")
     print(" • Spoken Language: 100% Authentic Japanese (日本語音声)")
-    print(" • Subtitles: Terjemahan Bahasa Indonesia di Terminal")
     print(" • Press [ENTER] to record microphone speech, or type text directly.")
     print(" • Type 'name <new_name>' to update your registered name.")
+    print(" • Type 'style yandere' / 'style sweet_wife' to switch romance style.")
+    print(" • Type 'lang id' / 'lang en' to switch subtitle language.")
     print(" • Type 'romance on' / 'romance off' to toggle romance mode.")
     print(" • Type 'rvc on' / 'rvc off' to toggle voice conversion.")
     print(" • Type 'exit' to end the session.")
@@ -185,30 +226,47 @@ def start_chat(fast_mode: bool = False):
         get_rvc_loader()
 
     if romance_mode:
-        greeting_jp = "クルクル〜クルリン！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
-        greeting_id = "Kuru kuru~ Kururin! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
+        if romance_style == "yandere":
+            greeting_jp = "クルクル〜クルリン…ふふっ、やっと私のところに来てくれたのね、あなた…♡ ずっと待ってたのよ…？"
+            greeting_sub = (
+                "Kuru kuru~ Kururin... Fufu, you've finally come to see me, darling...♡ I've been waiting for you forever, you know...?"
+                if sub_lang == "en" else
+                "Kuru kuru~ Kururin... Fufu, akhirnya kamu datang juga menemuiku, sayangku...♡ Dari tadi aku nungguin kamu terus tahu...?"
+            )
+        else:
+            greeting_jp = "クルクル〜クルリン！ねえ、あなた…今日も会えて嬉しいわよ。今日は何をして過ごす？"
+            greeting_sub = (
+                "Kuru kuru~ Kururin! Hey darling... I'm so glad to see you today. What shall we do together?"
+                if sub_lang == "en" else
+                "Kuru kuru~ Kururin! Hei sayangku... senang bisa ketemu kamu lagi hari ini. Hari ini kita mau ngapain?"
+            )
     else:
         greeting_jp = f"クルクル〜クルリン！こんにちは、{partner}！マダム・ヘルタよ。今日はどんな研究をするの？"
-        greeting_id = f"Kuru kuru~ Kururin! Halo, {partner}! Madam Herta di sini. Hari ini mau teliti apa?"
+        greeting_sub = (
+            f"Kuru kuru~ Kururin! Hello, {partner}! Madam Herta here. What research are we tackling today?"
+            if sub_lang == "en" else
+            f"Kuru kuru~ Kururin! Halo, {partner}! Madam Herta di sini. Hari ini mau teliti apa?"
+        )
 
+    sub_flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
     print("🤖 Madam Herta:")
     print(f"   🇯🇵 「{greeting_jp}」")
-    print(f"   🇮🇩 ({greeting_id})\n")
+    print(f"   {sub_flag} ({greeting_sub})\n")
 
     speak(greeting_jp, rvc_enabled=rvc_active)
 
-    conversation_history = [{"role": "model", "text": f"JP: {greeting_jp}\nID: {greeting_id}"}]
-    system_prompt = build_system_prompt(partner, romance_mode=romance_mode)
+    conversation_history = [{"role": "model", "text": f"JP: {greeting_jp}\nSUB: {greeting_sub}"}]
+    system_prompt = build_system_prompt(partner, romance_mode=romance_mode, romance_style=romance_style, subtitle_lang=sub_lang)
 
     while True:
         try:
             user_input = input(f"👉 [{partner}] (Press ENTER to speak / type message): ").strip()
         except (KeyboardInterrupt, EOFError):
             farewell_jp = f"クルクル〜じゃ、またね、{partner}！怠けちゃダメよ！"
-            farewell_id = "Kuru kuru~ Sampai jumpa lagi, sayang! Jangan malas ya!"
+            farewell_sub = "Kuru kuru~ See you later, darling! Don't slack off!" if sub_lang == "en" else "Kuru kuru~ Sampai jumpa lagi, sayang! Jangan malas ya!"
             print(f"\n\n🤖 Madam Herta:")
             print(f"   🇯🇵 「{farewell_jp}」")
-            print(f"   🇮🇩 ({farewell_id})")
+            print(f"   {sub_flag} ({farewell_sub})")
             speak(farewell_jp, rvc_enabled=rvc_active)
             break
 
@@ -226,10 +284,10 @@ def start_chat(fast_mode: bool = False):
         # Session commands
         if user_text.lower() in ["exit", "quit", "keluar", "q"]:
             farewell_jp = f"クルクル〜じゃ、またね、{partner}！頑張りなさい！"
-            farewell_id = "Kuru kuru~ Sampai jumpa lagi, sayang! Semangat ya!"
+            farewell_sub = "Kuru kuru~ See you later, darling! Give it your best!" if sub_lang == "en" else "Kuru kuru~ Sampai jumpa lagi, sayang! Semangat ya!"
             print(f"\n🤖 Madam Herta:")
             print(f"   🇯🇵 「{farewell_jp}」")
-            print(f"   🇮🇩 ({farewell_id})\n")
+            print(f"   {sub_flag} ({farewell_sub})\n")
             speak(farewell_jp, rvc_enabled=rvc_active)
             break
 
@@ -239,27 +297,48 @@ def start_chat(fast_mode: bool = False):
                 partner = new_name
                 cfg["partner_name"] = partner
                 save_config(cfg)
-                system_prompt = build_system_prompt(partner, romance_mode=romance_mode)
+                system_prompt = build_system_prompt(partner, romance_mode=romance_mode, romance_style=romance_style, subtitle_lang=sub_lang)
                 confirm_jp = f"わかったわ！これからは{partner}って呼んであげる。いい名前じゃない！"
-                confirm_id = f"Dimengerti! Mulai sekarang aku panggil kamu {partner}. Panggilan yang manis kan!"
+                confirm_sub = f"Understood! From now on I'll call you {partner}. It's a nice name!" if sub_lang == "en" else f"Dimengerti! Mulai sekarang aku panggil kamu {partner}. Panggilan yang manis kan!"
                 print(f"\n🤖 Madam Herta:")
                 print(f"   🇯🇵 「{confirm_jp}」")
-                print(f"   🇮🇩 ({confirm_id})\n")
+                print(f"   {sub_flag} ({confirm_sub})\n")
                 speak(confirm_jp, rvc_enabled=rvc_active)
+                continue
+
+        if user_text.lower().startswith("style "):
+            new_style = user_text[6:].strip().lower()
+            if new_style in ["yandere", "sweet_wife"]:
+                romance_style = new_style
+                cfg["romance_address_style"] = romance_style
+                save_config(cfg)
+                system_prompt = build_system_prompt(partner, romance_mode=romance_mode, romance_style=romance_style, subtitle_lang=sub_lang)
+                print(f"🖤 Romance Style changed to: {romance_style.upper()}.\n")
+                continue
+
+        if user_text.lower().startswith("lang "):
+            new_lang = user_text[5:].strip().lower()
+            if new_lang in ["en", "id"]:
+                sub_lang = new_lang
+                cfg["subtitle_language"] = sub_lang
+                save_config(cfg)
+                sub_flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
+                system_prompt = build_system_prompt(partner, romance_mode=romance_mode, romance_style=romance_style, subtitle_lang=sub_lang)
+                print(f"🌐 Subtitle Language changed to: {'English (🇬🇧)' if sub_lang == 'en' else 'Bahasa Indonesia (🇮🇩)'}.\n")
                 continue
 
         if user_text.lower() in ["romance on", "mode romance"]:
             romance_mode = True
             cfg["romance_mode"] = True
             save_config(cfg)
-            system_prompt = build_system_prompt(partner, romance_mode=romance_mode)
-            print("❤️ Romance Mode: ACTIVE (Intimate Wife & Loving Tone).\n")
+            system_prompt = build_system_prompt(partner, romance_mode=romance_mode, romance_style=romance_style, subtitle_lang=sub_lang)
+            print(f"❤️ Romance Mode: ACTIVE (Style: {romance_style.upper()}).\n")
             continue
         elif user_text.lower() in ["romance off", "mode casual"]:
             romance_mode = False
             cfg["romance_mode"] = False
             save_config(cfg)
-            system_prompt = build_system_prompt(partner, romance_mode=romance_mode)
+            system_prompt = build_system_prompt(partner, romance_mode=romance_mode, romance_style=romance_style, subtitle_lang=sub_lang)
             print("⚪ Romance Mode: OFF (Casual Partner Tone).\n")
             continue
 
@@ -277,15 +356,15 @@ def start_chat(fast_mode: bool = False):
 
         print("⏳ Madam Herta is thinking...")
         reply_raw = generate_llm_reply(conversation_history, system_prompt, api_key, chat_model)
-        reply_jp, reply_id = parse_reply(reply_raw)
+        reply_jp, reply_sub = parse_reply(reply_raw)
 
         print(f"\n🤖 Madam Herta:")
         print(f"   🇯🇵 「{reply_jp}」")
-        if reply_id:
-            print(f"   🇮🇩 ({reply_id})")
+        if reply_sub:
+            print(f"   {sub_flag} ({reply_sub})")
         print()
 
-        conversation_history.append({"role": "model", "text": f"JP: {reply_jp}\nID: {reply_id}"})
+        conversation_history.append({"role": "model", "text": f"JP: {reply_jp}\nSUB: {reply_sub}"})
 
         print("🔊 Madam Herta speaking...")
         speak(reply_jp, rvc_enabled=rvc_active)

@@ -113,10 +113,16 @@ def on_wake() -> bool:
 
     cfg = load_config()
     partner = cfg.get("partner_name", "あなた")
+    sub_lang = cfg.get("subtitle_language", "id")
     jp = f"クルクル〜クルリン！おかえり、{partner}！さあ、研究の続きを始めましょう！"
-    id_sub = f"Kuru kuru~ Kururin! Selamat datang kembali, {partner}! Ayo, mari kita lanjutkan risetnya!"
+    if sub_lang == "en":
+        sub_text = f"Kuru kuru~ Kururin! Welcome back, {partner}! Come on, let's continue our research!"
+        flag = "🇬🇧"
+    else:
+        sub_text = f"Kuru kuru~ Kururin! Selamat datang kembali, {partner}! Ayo, mari kita lanjutkan risetnya!"
+        flag = "🇮🇩"
 
-    show_notification(f"💎 Madam Herta: {jp}", f"🇮🇩 {id_sub}")
+    show_notification(f"💎 Madam Herta: {jp}", f"{flag} {sub_text}")
     play_audio(WAKE_AUDIO, timeout=10)
     return True
 

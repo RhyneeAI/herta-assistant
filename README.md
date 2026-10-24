@@ -96,6 +96,8 @@ herta config [OPTIONS]
 | `--key` | `string` | `""` | Set or update your Google Gemini API key. |
 | `--rvc` | `on` \| `off` | `on` | Enable or disable high-fidelity RVC Yamazaki Haruka voice transformation. |
 | `--romance` | `on` \| `off` | `on` | Enable or disable affectionate anime wife mode (intimate Japanese inflections). |
+| `--style` | `sweet_wife` \| `yandere` | `sweet_wife` | Choose romance persona style: `sweet_wife` (affectionate tsundere) or `yandere` (obsessive & possessive). |
+| `--lang` | `id` \| `en` | `id` | Choose subtitle translation language: `id` (Indonesian, default) or `en` (English). |
 | `--companion-min` | `integer` | `20` | Minimum wait interval (in minutes) for spontaneous companion check-ins. |
 | `--companion-max` | `integer` | `45` | Maximum wait interval (in minutes) for spontaneous companion check-ins. |
 
@@ -121,6 +123,7 @@ Configuration settings are stored in JSON format and loaded automatically at sta
   "gemini_tts_model": "gemini-2.5-flash-preview-tts",
   "romance_mode": true,
   "romance_address_style": "sweet_wife",
+  "subtitle_language": "id",
   "companion_min_minutes": 20,
   "companion_max_minutes": 45
 }
@@ -130,7 +133,7 @@ Configuration settings are stored in JSON format and loaded automatically at sta
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `partner_name` | `string` | `"あなた"` | How Madam Herta addresses you in conversation and notifications. When set to `"あなた"` (*Anata*), it conveys an intimate, affectionate tone like an anime wife addressing her husband, accompanied by the Indonesian subtitle translation *"Sayang"*. You can also customize it to your name (e.g. `"Rinne"`) or title (e.g. `"夫"` / *Danna-sama*). |
+| `partner_name` | `string` | `"あなた"` | How Madam Herta addresses you in conversation and notifications. When set to `"あなた"` (*Anata*), it conveys an intimate, affectionate tone like an anime wife addressing her husband, accompanied by the Indonesian subtitle translation *"Sayang"* (or *"Darling"* in English). You can also customize it to your name (e.g. `"Rinne"`) or title (e.g. `"夫"` / *Danna-sama*). |
 | `gemini_api_key` | `string` | `""` | Google Gemini API Key used for dynamic chat reasoning, spontaneous dialogue generation, and fallback intelligence. Can also be set via the `GEMINI_API_KEY` environment variable or legacy `~/.gemini_api_key`. |
 | `rvc_enabled` | `boolean` | `true` | When `true`, all speech synthesis is converted through Retrieval-based Voice Conversion (RVC v2) using Yamazaki Haruka's official Herta voice weights. When `false`, uses raw Edge-TTS for ultra-fast response without neural pitch modeling. |
 | `rvc_model_path` | `string` | Path | Absolute path to the trained RVC `.pth` checkpoint file. Defaults to `/mnt/games/rvc_models/model.pth` on Linux or `%APPDATA%\HertaAssistant\models\model.pth` on Windows. |
@@ -139,7 +142,8 @@ Configuration settings are stored in JSON format and loaded automatically at sta
 | `gemini_chat_model` | `string` | `"gemini-3.5-flash"` | The Gemini model identifier used for conversational LLM chat turns and generating spontaneous companion dialogues. |
 | `gemini_tts_model` | `string` | `"gemini-2.5-flash-preview-tts"` | Fallback cloud TTS model used if local neural TTS synthesis is unreachable. |
 | `romance_mode` | `boolean` | `true` | When `true`, engages Madam Herta's intimate anime wife persona. Prompts inject affectionate phrasing, playful tsundere teasing, loving pauses (`...`, `〜`), and sweet Japanese particles (`よ`, `ね`, `わ`). |
-| `romance_address_style` | `string` | `"sweet_wife"` | Preset addressing style for the romance engine. Configured to align Japanese respectful tenderness with warm Indonesian subtitles. |
+| `romance_address_style` | `string` | `"sweet_wife"` | Preset addressing style for the romance engine. Options: `"sweet_wife"` (loving, doting, tsundere anime wife) or `"yandere"` (obsessively loving, sweetly possessive, clingy, subtle chilling possessiveness). |
+| `subtitle_language` | `string` | `"id"` | Subtitle translation language displayed in terminal and desktop notification banners. Options: `"id"` (Indonesian, default) or `"en"` (English). Spoken voice always remains 100% Japanese. |
 | `companion_min_minutes` | `integer` | `20` | Lower bound of the randomized spontaneous companion timer in minutes. Prevents check-ins from firing too frequently. |
 | `companion_max_minutes` | `integer` | `45` | Upper bound of the randomized spontaneous companion timer in minutes. Ensures Herta spontaneously checks in before you stay idle or overworked for too long. |
 
@@ -151,6 +155,8 @@ While in a `herta chat` session:
 * **Press `[ENTER]`**: Record your microphone input.
 * **Type text**: Send typed messages directly.
 * **`name <new_name>`**: Change your partner name on the fly.
+* **`style <sweet_wife|yandere>`**: Switch romance style dynamically.
+* **`lang <id|en>`**: Switch subtitle language on the fly.
 * **`rvc on` / `rvc off`**: Toggle between high-fidelity Yamazaki Haruka voice and instant Fast TTS.
 * **`exit`**: End the conversation.
 

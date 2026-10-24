@@ -41,6 +41,7 @@ DEFAULT_CONFIG = {
     "gemini_tts_model": "gemini-2.5-flash-preview-tts",
     "romance_mode": True,
     "romance_address_style": "sweet_wife",
+    "subtitle_language": "id",
     "companion_min_minutes": 20,
     "companion_max_minutes": 45
 }

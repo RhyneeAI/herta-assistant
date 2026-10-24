@@ -25,82 +25,134 @@ BUILTIN_MOMENTS = [
     {
         "category": "bored",
         "jp": "ねえ、あなた〜。私ちょっと退屈なんだけど。私の相手をしなさいよ！",
-        "id": "Hei, sayang~ Aku agak bosan nih. Ajak aku ngobrol dong!"
+        "id": "Hei, sayang~ Aku agak bosan nih. Ajak aku ngobrol dong!",
+        "en": "Hey, darling~ I'm a bit bored. Come keep me company!"
     },
     {
         "category": "bored",
         "jp": "クルクル〜回るのも飽きちゃったわ。ねえ、何か面白いこと話してよ。",
-        "id": "Kuru kuru~ Muter-muter pun aku mulai bosan. Hei, ceritain sesuatu yang seru dong."
+        "id": "Kuru kuru~ Muter-muter pun aku mulai bosan. Hei, ceritain sesuatu yang seru dong.",
+        "en": "Kuru kuru~ Even spinning around is getting dull. Hey, tell me something interesting."
     },
     {
         "category": "bored",
         "jp": "研究ばっかりしてないで、たまには私のことも構いなさいよ。…ちょっとだけだからね！",
-        "id": "Jangan cuma fokus riset terus, sesekali perhatikan aku juga dong. ...cuma sebentar lho ya!"
+        "id": "Jangan cuma fokus riset terus, sesekali perhatikan aku juga dong. ...cuma sebentar lho ya!",
+        "en": "Don't just bury yourself in research, give me some attention too. ...Just for a little while, got it?!"
     },
     # 2. Caring / Health & Break reminders (Tsundere care)
     {
         "category": "caring",
         "jp": "ねえ、あなた。ずっと画面見てるけど疲れてない？たまにはお茶でも飲んで休憩しなさいよね。",
-        "id": "Hei, sayang. Dari tadi kamu natap layar terus, nggak capek? Sesekali minum teh dan istirahat gih."
+        "id": "Hei, sayang. Dari tadi kamu natap layar terus, nggak capek? Sesekali minum teh dan istirahat gih.",
+        "en": "Hey, darling. Staring at that screen all this time, aren't you tired? Go drink some tea and rest."
     },
     {
         "category": "caring",
         "jp": "ちょっと、あなた！根を詰めすぎよ。倒れられたら困るんだから…ちゃんと休んでよね！",
-        "id": "Tunggu dulu, sayang! Jangan terlalu memaksakan diri. Kalau kamu sakit kan aku yang repot... istirahat yang bener ya!"
+        "id": "Tunggu dulu, sayang! Jangan terlalu memaksakan diri. Kalau kamu sakit kan aku yang repot... istirahat yang bener ya!",
+        "en": "Wait a second, darling! You're pushing yourself too hard. Don't you dare collapse... take a proper rest!"
     },
     {
         "category": "caring",
         "jp": "もう、ちゃんと水分補給してる？お水飲んで、ちょっと肩の力を抜きなさい。",
-        "id": "Astaga, kamu udah minum air belum? Minum dulu sana, rilekskan pundakmu sebentar."
+        "id": "Astaga, kamu udah minum air belum? Minum dulu sana, rilekskan pundakmu sebentar.",
+        "en": "Geez, have you been staying hydrated? Drink some water and relax your shoulders."
     },
     # 3. Sweet / Affectionate Wife
     {
         "category": "sweet",
         "jp": "ふふっ、今日も一生懸命頑張ってるのね。…さすが私の旦那様、かっこいいわよ。",
-        "id": "Fufu~ Hari ini kamu kerja keras ya. ...Memang pantas jadi suamiku, keren kok."
+        "id": "Fufu~ Hari ini kamu kerja keras ya. ...Memang pantas jadi suamiku, keren kok.",
+        "en": "Fufu~ You worked so hard again today. ...As expected of my husband, quite handsome."
     },
     {
         "category": "sweet",
         "jp": "クルクル〜ちょっと頭がクラクラしちゃった…ねえ、頭なでて？…今だけよ？",
-        "id": "Kuru kuru~ Kepalaku agak pusing nih... hei, elus kepalaku dong? ...cuma sekarang lho ya?"
+        "id": "Kuru kuru~ Kepalaku agak pusing nih... hei, elus kepalaku dong? ...cuma sekarang lho ya?",
+        "en": "Kuru kuru~ I'm feeling a bit dizzy... hey, pat my head? ...Only for right now, okay?"
     },
     {
         "category": "sweet",
         "jp": "ねえ、あなた。いつも私の人形の面倒見てくれてありがとね。…べ、別に照れてなんかないわよ！",
-        "id": "Hei, sayang. Makasih ya selalu jagain boneka-bonekaku. ...B-bukannya aku malu atau gimana lho ya!"
+        "id": "Hei, sayang. Makasih ya selalu jagain boneka-bonekaku. ...B-bukannya aku malu atau gimana lho ya!",
+        "en": "Hey, darling. Thanks for always looking after my puppets. ...I-It's not like I'm blushing or anything!"
     },
     # 4. Curious about your work
     {
         "category": "curious",
         "jp": "ねえ、あなた。今何を作ってるの？ちょっと私にも見せてみなさいよ。",
-        "id": "Hei, sayang. Sekarang lagi ngerjain apa sih? Coba perlihatkan sedikit ke aku."
+        "id": "Hei, sayang. Sekarang lagi ngerjain apa sih? Coba perlihatkan sedikit ke aku.",
+        "en": "Hey, darling. What are you building right now? Show me a peek."
+    },
+    # 5. Yandere / Possessive Love
+    {
+        "category": "yandere",
+        "jp": "ねえ、あなた…今、誰のこと考えてたの？…ふふっ、私だけを見ていればいいのよ…？",
+        "id": "Hei, sayang... barusan lagi mikirin siapa? ...Fufu, kamu cuma boleh natap aku tahu...?",
+        "en": "Hey, darling... who were you thinking about just now? ...Fufu, your eyes should only be on me... right?"
+    },
+    {
+        "category": "yandere",
+        "jp": "ふふっ、どこにも行かないでね？私のそばを離れたら…どうなるか分からないわよ…♡",
+        "id": "Fufu, jangan pernah pergi ke mana-mana ya? Kalau sampai ninggalin aku... nggak tahu deh apa yang bakal terjadi...♡",
+        "en": "Fufu, don't you dare go anywhere, okay? If you ever leave my side... who knows what might happen...♡"
+    },
+    {
+        "category": "yandere",
+        "jp": "ずっと画面ばかり見て…私に構ってくれないなら、そのパソコン壊しちゃおうかしら…？",
+        "id": "Natap layar terus... kalau kamu nggak mau peduliin aku, mending laptop ini kuhancurin aja kali ya...?",
+        "en": "Staring at the screen constantly... if you won't pay attention to me, maybe I should just smash this PC...?"
+    },
+    {
+        "category": "yandere",
+        "jp": "ねえ、あなた。私の人形たちの中に閉じ込めて、永遠に一緒にいられたら素敵だと思わない…？",
+        "id": "Hei, sayang. Kalau kamu kukunci di dalam salah satu bonekaku biar kita bersama selamanya, bukankah terdengar manis...?",
+        "en": "Hey, darling. Wouldn't it be wonderful if I sealed you inside one of my puppets so we could be together forever...?"
     }
 ]
 
 
-def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str) -> dict:
+def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str, romance_style: str = "sweet_wife", subtitle_lang: str = "id") -> dict:
     """Generate dynamic companion dialogue using Gemini LLM if API key is present."""
     if not api_key:
         return None
 
     import urllib.request
-    mood = random.choice([
-        "bored and playfully pouting for your attention",
-        "worried about your health and reminding you to take a break or drink water (tsundere care)",
-        "acting like an affectionate, teasing anime wife",
-        "curious about what you're coding or doing right now"
-    ])
+
+    if romance_style == "yandere":
+        mood = random.choice([
+            "sweetly possessive and whispering that your eyes and heart belong only to her",
+            "playfully menacing, questioning who else you might be thinking about instead of her",
+            "whispering that she wants to keep you locked inside her puppet collection forever so you never leave",
+            "pouting with intense obsessive attachment because you haven't looked at her recently"
+        ])
+        persona_note = "Yandere anime wife: intensely clingy, obsessively in love, possessive, sweet yet subtly chilling."
+    else:
+        mood = random.choice([
+            "bored and playfully pouting for your attention",
+            "worried about your health and reminding you to take a break or drink water (tsundere care)",
+            "acting like an affectionate, teasing anime wife",
+            "curious about what you're coding or doing right now"
+        ])
+        persona_note = "Affectionate tsundere anime wife: playful, clever, witty, overflowing with sweet love."
+
+    if subtitle_lang == "en":
+        sub_rule = "SUB: <Natural English translation for subtitles, translating affectionate address as 'darling'>"
+    else:
+        sub_rule = "SUB: <Casual, natural Indonesian translation for subtitles, translating address as 'sayang'>"
 
     prompt = (
-        "You are MADAM HERTA (ヘルタ / The Herta) from Honkai: Star Rail acting like an affectionate, "
-        f"playful, tsundere anime wife talking spontaneously to her husband '{partner_name}'.\n"
-        f"Context for this spontaneous interaction: You are {mood}.\n"
+        "You are MADAM HERTA (ヘルタ / The Herta) from Honkai: Star Rail acting like an anime wife "
+        f"talking spontaneously to her husband '{partner_name}'.\n"
+        f"Persona Style: {persona_note}\n"
+        f"Context for this spontaneous moment: You are {mood}.\n"
         "Rules:\n"
         f"- Address him as '{partner_name}' (or 'あなた' / '旦那様').\n"
         "- Reply MUST be 1 or 2 concise, lively sentences.\n"
         "- Strictly follow this 2-line format:\n"
         "JP: <Natural, expressive Japanese spoken by Herta>\n"
-        "ID: <Casual, natural Indonesian translation for subtitles, translating address as 'sayang'>"
+        f"{sub_rule}"
     )
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{chat_model}:generateContent?key={api_key}"
@@ -122,15 +174,18 @@ def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str) ->
                 if parts:
                     text = parts[0].get("text", "")
                     jp_line = ""
-                    id_line = ""
+                    sub_line = ""
                     for line in text.splitlines():
                         line_clean = line.strip()
-                        if line_clean.upper().startswith("JP:"):
+                        upper = line_clean.upper()
+                        if upper.startswith("JP:"):
                             jp_line = line_clean[3:].strip()
-                        elif line_clean.upper().startswith("ID:"):
-                            id_line = line_clean[3:].strip()
-                    if jp_line and id_line:
-                        return {"jp": jp_line, "id": id_line}
+                        elif upper.startswith("SUB:"):
+                            sub_line = line_clean[4:].strip()
+                        elif upper.startswith("ID:") or upper.startswith("EN:"):
+                            sub_line = line_clean[3:].strip()
+                    if jp_line and sub_line:
+                        return {"jp": jp_line, "sub": sub_line}
     except Exception as exc:
         sys.stderr.write(f"Dynamic moment generation error: {exc}\n")
 
@@ -144,24 +199,47 @@ def trigger_spontaneous_interaction():
     api_key = cfg.get("gemini_api_key", "")
     chat_model = cfg.get("gemini_chat_model", "gemini-3.5-flash")
     rvc_enabled = cfg.get("rvc_enabled", True)
+    romance_style = cfg.get("romance_address_style", "sweet_wife")
+    sub_lang = cfg.get("subtitle_language", "id")
 
     moment = None
     # 50% chance to try dynamic generation if API key exists, otherwise pick from curated library
     if api_key and random.random() < 0.5:
-        moment = generate_dynamic_moment(partner, api_key, chat_model)
+        moment = generate_dynamic_moment(
+            partner_name=partner,
+            api_key=api_key,
+            chat_model=chat_model,
+            romance_style=romance_style,
+            subtitle_lang=sub_lang
+        )
 
-    if not moment:
-        chosen = random.choice(BUILTIN_MOMENTS)
-        moment = {
-            "jp": chosen["jp"].replace("あなた", partner),
-            "id": chosen["id"].replace("sayang", "sayang" if partner == "あなた" else partner)
-        }
+    if moment:
+        jp_text = moment["jp"]
+        sub_text = moment["sub"]
+        flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
+    else:
+        if romance_style == "yandere":
+            yandere_moments = [m for m in BUILTIN_MOMENTS if m.get("category") == "yandere"]
+            if yandere_moments and random.random() < 0.75:
+                chosen = random.choice(yandere_moments)
+            else:
+                chosen = random.choice(BUILTIN_MOMENTS)
+        else:
+            sweet_moments = [m for m in BUILTIN_MOMENTS if m.get("category") != "yandere"]
+            chosen = random.choice(sweet_moments if sweet_moments else BUILTIN_MOMENTS)
 
-    jp_text = moment["jp"]
-    id_text = moment["id"]
+        jp_text = chosen["jp"].replace("あなた", partner)
+        if sub_lang == "en":
+            flag = "🇬🇧"
+            sub_raw = chosen.get("en", chosen.get("id"))
+            sub_text = sub_raw.replace("darling", "darling" if partner == "あなた" else partner)
+        else:
+            flag = "🇮🇩"
+            sub_raw = chosen.get("id", chosen.get("en"))
+            sub_text = sub_raw.replace("sayang", "sayang" if partner == "あなた" else partner)
 
     # 1. Desktop banner notification
-    show_notification(f"💎 Madam Herta: {jp_text}", f"🇮🇩 {id_text}")
+    show_notification(f"💎 Madam Herta: {jp_text}", f"{flag} {sub_text}")
 
     # 2. Synthesize audio
     raw_audio = synthesize_speech(jp_text)
