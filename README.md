@@ -28,44 +28,92 @@ Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎は
 
 ---
 
+## 📋 Requirements & Prerequisites
+
+Sebelum menginstall, pastikan sistem Anda memenuhi persyaratan berikut:
+
+### 1. Python Environment
+* **Versi Python**: Python `>= 3.10` (Disarankan **Python 3.10 – 3.12** untuk kompatibilitas penuh RVC v2 voice conversion, atau **Python 3.10 – 3.14+** untuk mode standar Edge-TTS & Desktop GUI).
+* **PATH**: Pastikan Python dicentang *"Add python.exe to PATH"* saat instalasi Windows.
+
+### 2. Python Packages
+Dependencies dibagi menjadi dua kelompok:
+* **Core & GUI (Wajib)** — Ringan, langsung jalan di semua platform:
+  * `PyQt6` (Desktop Mascot & System Tray UI)
+  * `Pillow` (Animasi GIF Herta & rendering grafis)
+  * `edge-tts` (Sintesis suara bahasa Jepang real-time)
+  * `soundfile` & `numpy` (Playback audio & manipulasi waveform)
+  * `requests` (Konektivitas Gemini API)
+* **RVC Neural Voice Weights (Opsional)** — Untuk kloning suara Yamazaki Haruka v2:
+  * `torch`, `torchaudio`, `torchcrepe`, `transformers`, `praat-parselmouth`, `infer-rvc-python`, `faiss-cpu`, `scipy`, `librosa`.
+  * *Catatan:* Jika RVC tidak diinstall, Madam Herta secara otomatis beralih (*graceful fallback*) ke suara Edge-TTS Jepang (`ja-JP-NanamiNeural`) yang tetap sangat natural dan responsif tanpa lag.
+
+### 3. System Tools (Opsional / Disarankan)
+* **Windows**: `ffmpeg` (disarankan untuk konversi audio), Visual C++ Build Tools (hanya jika ingin build package C/Cython seperti `pyworld`).
+* **Linux**: `ffmpeg`, `libasound2-dev`, `python3-venv`, `notify-send`.
+
+---
+
 ## 🚀 Quick Installation
 
-### On Linux
+### Opsi 1: Otomatis (Rekomendasi)
 
-Clone or copy the directory, then run the installer:
+#### 🔹 Pada Windows (10 / 11):
+1. Buka PowerShell dan arahkan ke folder project.
+2. Jalankan installer:
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\install.ps1
+```
+*(Atau cukup double-click `scripts\install.bat`)*
 
+Installer akan otomatis:
+* Membuat virtual environment di `%USERPROFILE%\.herta-env`.
+* Menginstall dependensi yang diperlukan.
+* Mengunduh model suara RVC Yamazaki Haruka ke `%APPDATA%\HertaAssistant\models`.
+* Membuat launcher global `herta.cmd` di User PATH.
+* Mendaftarkan shortcut Startup Windows untuk boot greeting dan sleep monitor background.
+
+#### 🔹 Pada Linux:
 ```bash
 cd herta-assistant
 chmod +x scripts/install.sh
 ./scripts/install.sh
 ```
 
-The installer will:
-1. Create or use Python virtual environment.
-2. Install dependencies and register the `herta` command in `~/.local/bin`.
-3. Link or download the Yamazaki Haruka RVC model weights.
-4. Enable the `herta-sleep-monitor.service` systemd user service.
-5. Setup the desktop autostart login greeting.
+Installer akan otomatis membuat virtual environment, mendaftarkan CLI di `~/.local/bin`, serta mengaktifkan systemd user service `herta-sleep-monitor.service`.
 
 ---
 
-### On Windows (10 / 11)
+### Opsi 2: Manual (Step-by-Step)
 
-1. Open PowerShell as Administrator or standard user.
-2. Navigate to the folder and run:
+Jika Anda ingin menyiapkan virtual environment sendiri:
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\scripts\install.ps1
+```bash
+# 1. Masuk ke direktori project
+cd herta-assistant
+
+# 2. Buat virtual environment
+python -m venv .venv
+
+# 3. Aktifkan virtual environment
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# Windows (CMD):
+.venv\Scripts\activate.bat
+# Linux:
+source .venv/bin/activate
+
+# 4. Update pip & install dependensi
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# 5. Install package dalam mode editable
+pip install -e .
+
+# 6. Jalankan Herta Desktop Mascot
+herta gui
 ```
-*(Alternatively, simply double-click `scripts\install.bat`)*
-
-The installer will:
-1. Create a Python virtual environment in `%USERPROFILE%\.herta-env`.
-2. Install all required dependencies.
-3. Automatically download the Yamazaki Haruka model files into `%APPDATA%\HertaAssistant\models`.
-4. Create the `herta.cmd` launcher in your user PATH.
-5. Create Windows Startup shortcuts for the login greeting and background sleep monitor.
 
 ---
 

@@ -23,10 +23,18 @@ $PythonExe = Join-Path $VenvDir "Scripts\python.exe"
 $PipExe = Join-Path $VenvDir "Scripts\pip.exe"
 
 # 2. Install Dependencies
-Write-Host "Installing Python dependencies..." -ForegroundColor Yellow
+Write-Host "Installing Core Python dependencies..." -ForegroundColor Yellow
 & $PipExe install --upgrade pip
-& $PipExe install -r (Join-Path $ProjectDir "requirements.txt")
+& $PipExe install PyQt6 Pillow edge-tts soundfile requests numpy scipy librosa
 & $PipExe install -e $ProjectDir
+
+Write-Host "Installing optional RVC voice conversion packages..." -ForegroundColor Yellow
+try {
+    & $PipExe install torch torchcrepe transformers praat-parselmouth faiss-cpu infer-rvc-python --no-deps
+} catch {
+    Write-Host "Note: Optional RVC dependencies skipped. Herta will use Fast Edge-TTS mode." -ForegroundColor Gray
+}
+
 
 # 3. Download Models
 Write-Host "Checking / Downloading voice models..." -ForegroundColor Yellow
