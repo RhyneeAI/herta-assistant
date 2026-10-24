@@ -1,8 +1,8 @@
-# 💎 Madam Herta Assistant (ヘルタ)
+# <img src="assets/images/herta_avatar_64.png" width="32" height="32" valign="middle" /> Madam Herta Assistant (ヘルタ)
 
 Authentic **Madam Herta** (Genius Society #83 from *Honkai: Star Rail*) AI Assistant ecosystem for **Linux** and **Windows**.
 
-Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎はるか)** RVC v2 weights, paired with clean Indonesian subtitle translations in your terminal and desktop notifications.
+Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎はるか)** RVC v2 weights, paired with clean subtitle translations in Indonesian and English across your desktop, notifications, and interactive floating mascot.
 
 ---
 
@@ -10,15 +10,17 @@ Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎は
 
 * **Authentic Japanese Voice (山崎はるか / Herta JP)**:
   Trained on official voicelines from Honkai: Star Rail via RVC v2 (Retrieval-based Voice Conversion) for genuine anime seiyuu cadence and tone.
-* **Indonesian Subtitles**:
-  Every response displays the Japanese line alongside an Indonesian translation subtitle.
-* **Proactive Companion & Wife Mode**:
-  Periodically and spontaneously checks in on you (customizable, default: every 20–45 minutes), asking if you're tired, reminding you to drink water, acting bored and demanding attention, or sharing sweet tsundere praise (*"Nee, anata~ Watashi chotto taikutsu nandakedo!"*).
+* **Desktop Mascot & System Tray GUI (`herta gui`)**:
+  Interactive desktop companion combining a frameless, transparent, draggable anime mascot (with animated Kuru Kuru spinning GIF and live subtitle speech bubbles) and an unobtrusive system tray applet with quick controls.
+* **Subtitles in Indonesian & English**:
+  Every response displays the Japanese line alongside an Indonesian (`id`) or English (`en`) translation subtitle.
+* **Proactive Companion & Wife Mode (Sweet Wife & Yandere)**:
+  Periodically and spontaneously checks in on you (customizable, default: every 20–45 minutes). Switchable between **Sweet Wife** (doting tsundere) and **Yandere** (sweetly possessive and obsessive).
 * **Boot & Login Greeting**:
-  Plays time-contextual voicelines (morning, afternoon, evening) when your computer starts or logs in.
+  Plays time-contextual voicelines (morning, afternoon, evening) with native desktop notifications when your computer starts or logs in.
 * **Sleep & Wake Monitor**:
-  * **Going to Sleep**: Plays a bedtime voiceline (*"Mou neru no, Rinne? Kuru kuru~ Oyasumi, mata ashita ne!"*).
-  * **Waking Up**: Greets you on resume (*"Kuru kuru~ Kururin! Okaeri, Rinne!"*).
+  * **Going to Sleep**: Plays a bedtime voiceline (*"Mou neru no, anata? Kuru kuru~ Oyasumi, mata ashita ne!"*).
+  * **Waking Up**: Greets you on resume (*"Kuru kuru~ Kururin! Okaeri, anata!"*).
 * **Cross-Platform**:
   Full native compatibility for both **Linux** (systemd, PipeWire/PulseAudio, notify-send) and **Windows 10/11** (Win32 power broadcast, winsound, PowerShell toast notifications).
 
@@ -71,7 +73,8 @@ The installer will:
 
 | Command | Option / Flag | Description |
 | :--- | :--- | :--- |
-| `herta` or `herta chat` | `[--fast]` | Start live voice chat session. `--fast` uses instant Edge-TTS without RVC conversion. |
+| `herta gui` | *None* | Launch Madam Herta Desktop Mascot & System Tray GUI. |
+| `herta` or `herta chat` | `[--fast]` | Start live voice chat session in terminal. `--fast` uses instant Edge-TTS. |
 | `herta greet` | *None* | Trigger time-aware login/startup voice greeting (morning, afternoon, evening). |
 | `herta sleep` | *None* | Manually trigger bedtime / going-to-sleep voiceline. |
 | `herta wake` | *None* | Manually trigger resume / wake-up voiceline. |
@@ -167,17 +170,21 @@ While in a `herta chat` session:
 ```text
 herta-assistant/
 ├── assets/
-│   └── audio/              # Pre-rendered voicelines (morning, afternoon, sleep, wake)
+│   ├── audio/              # Pre-rendered voicelines (morning, afternoon, sleep, wake)
+│   └── images/             # Authentic avatar icons and Kuru Kuru animated GIFs
 ├── herta/
 │   ├── __init__.py
 │   ├── audio.py            # Cross-platform audio playback & mic recording
 │   ├── chat.py             # Interactive live voice chat engine
 │   ├── cli.py              # Unified command-line interface entrypoint
+│   ├── companion.py        # Proactive companion loop & spontaneous interactions
 │   ├── config.py           # Configuration manager (Linux & Windows paths)
 │   ├── greeting.py         # Startup / boot greeting handler
+│   ├── gui.py              # Desktop Mascot & System Tray GUI (PyQt6)
 │   ├── notifier.py         # Cross-platform desktop toast notification banners
 │   ├── power_monitor.py    # Sleep and wake listener (DBus / Win32)
 │   ├── rvc.py              # RVC v2 Yamazaki Haruka inference wrapper
+│   ├── service.py          # Background service controller
 │   └── tts.py              # Japanese TTS generator (Edge-TTS & Gemini)
 ├── scripts/
 │   ├── download_models.py  # Automatic Hugging Face RVC model downloader

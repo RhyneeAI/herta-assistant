@@ -238,8 +238,8 @@ def trigger_spontaneous_interaction():
             sub_raw = chosen.get("id", chosen.get("en"))
             sub_text = sub_raw.replace("sayang", "sayang" if partner == "あなた" else partner)
 
-    # 1. Desktop banner notification
-    show_notification(f"💎 Madam Herta: {jp_text}", f"{flag} {sub_text}")
+    # 1. Desktop banner notification with Herta avatar icon
+    show_notification(f"Madam Herta: {jp_text}", f"{flag} {sub_text}")
 
     # 2. Synthesize audio
     raw_audio = synthesize_speech(jp_text)

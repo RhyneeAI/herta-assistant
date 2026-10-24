@@ -29,6 +29,9 @@ def main():
     chat_parser = subparsers.add_parser("chat", help="Start interactive live voice chat session")
     chat_parser.add_argument("--fast", "--no-rvc", action="store_true", help="Fast mode without RVC voice conversion")
 
+    # GUI command
+    subparsers.add_parser("gui", help="Launch Madam Herta Desktop Mascot & System Tray GUI")
+
     # Greeting command
     subparsers.add_parser("greet", help="Trigger boot / startup voice greeting")
 
@@ -70,6 +73,9 @@ def main():
     if args.command is None or args.command == "chat":
         fast_mode = getattr(args, "fast", False)
         start_chat(fast_mode=fast_mode)
+    elif args.command == "gui":
+        from herta.gui import run_gui
+        run_gui()
     elif args.command == "greet":
         trigger_greeting()
     elif args.command == "monitor":

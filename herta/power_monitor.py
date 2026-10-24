@@ -122,7 +122,7 @@ def on_wake() -> bool:
         sub_text = f"Kuru kuru~ Kururin! Selamat datang kembali, {partner}! Ayo, mari kita lanjutkan risetnya!"
         flag = "🇮🇩"
 
-    show_notification(f"💎 Madam Herta: {jp}", f"{flag} {sub_text}")
+    show_notification(f"Madam Herta: {jp}", f"{flag} {sub_text}")
     play_audio(WAKE_AUDIO, timeout=10)
     return True
 

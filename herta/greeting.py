@@ -53,8 +53,8 @@ def trigger_greeting():
         except Exception:
             pass
 
-    # Display notification banner with subtitles
-    show_notification(f"💎 Madam Herta: {jp_text}", f"{flag} {sub_text}")
+    # Display notification banner with subtitles and Herta icon
+    show_notification(f"Madam Herta: {jp_text}", f"{flag} {sub_text}")
 
     # Play authentic Yamazaki Haruka audio
     if os.path.exists(audio_file):
