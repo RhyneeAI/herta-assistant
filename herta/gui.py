@@ -237,6 +237,7 @@ class FloatingMascot(QWidget):
     poke_triggered = pyqtSignal()
     chat_requested = pyqtSignal()
     hide_requested = pyqtSignal()
+    quit_requested = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -320,9 +321,14 @@ class FloatingMascot(QWidget):
         btn_hide.setToolTip("Hide Mascot to System Tray")
         btn_hide.clicked.connect(self.hide_requested.emit)
 
+        btn_quit = QPushButton("❌", self.toolbar)
+        btn_quit.setToolTip("Exit Madam Herta completely")
+        btn_quit.clicked.connect(self.quit_requested.emit)
+
         tb_layout.addWidget(btn_chat)
         tb_layout.addWidget(btn_poke)
         tb_layout.addWidget(btn_hide)
+        tb_layout.addWidget(btn_quit)
 
         layout.addWidget(self.toolbar, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -370,6 +376,7 @@ class FloatingMascot(QWidget):
         act_poke = menu.addAction("✨ Poke Madam Herta")
         menu.addSeparator()
         act_hide = menu.addAction("⬇️ Minimize to System Tray")
+        act_quit = menu.addAction("❌ Exit Madam Herta")
 
         action = menu.exec(event.globalPos())
         if action == act_chat:
@@ -378,6 +385,13 @@ class FloatingMascot(QWidget):
             self.poke_triggered.emit()
         elif action == act_hide:
             self.hide_requested.emit()
+        elif action == act_quit:
+            self.quit_requested.emit()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self.hide_requested.emit()
+        super().keyPressEvent(event)
 
     def save_position(self):
         cfg = load_config()
@@ -720,6 +734,7 @@ class HertaTrayApp(QSystemTrayIcon):
         self.mascot.poke_triggered.connect(self.on_poke_mascot)
         self.mascot.chat_requested.connect(self.open_chat)
         self.mascot.hide_requested.connect(self.hide_mascot)
+        self.mascot.quit_requested.connect(self.quit_app)
         self.companion_thread.moment_triggered.connect(self.on_companion_moment)
 
     def on_tray_activated(self, reason):
