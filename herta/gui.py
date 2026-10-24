@@ -110,7 +110,7 @@ class ChatWorker(QThread):
 
     def run(self):
         api_key = self.cfg.get("gemini_api_key", "")
-        chat_model = self.cfg.get("gemini_chat_model", "gemini-3.5-flash")
+        chat_model = self.cfg.get("gemini_chat_model", "gemini-3.1-flash-lite")
         partner = self.cfg.get("partner_name", "あなた")
         romance_mode = self.cfg.get("romance_mode", True)
         romance_style = self.cfg.get("romance_address_style", "sweet_wife")
@@ -135,7 +135,7 @@ class ChatWorker(QThread):
         turns.append({"role": "user", "text": user_text})
 
         try:
-            reply_raw = generate_llm_reply(turns, system_prompt, api_key, chat_model)
+            reply_raw = generate_llm_reply(turns, system_prompt, api_key, chat_model, sub_lang=sub_lang)
             reply_jp, reply_sub = parse_reply(reply_raw, target_lang=sub_lang)
             self.reply_ready.emit(user_text, reply_jp, reply_sub)
         except Exception as exc:

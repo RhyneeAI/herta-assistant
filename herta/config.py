@@ -37,7 +37,7 @@ DEFAULT_CONFIG = {
     "rvc_model_path": "/mnt/games/rvc_models/model.pth" if not IS_WINDOWS else os.path.join(CONFIG_DIR, "models", "model.pth"),
     "rvc_index_path": "/mnt/games/rvc_models/model.index" if not IS_WINDOWS else os.path.join(CONFIG_DIR, "models", "model.index"),
     "tts_voice": "ja-JP-NanamiNeural",
-    "gemini_chat_model": "gemini-3.5-flash",
+    "gemini_chat_model": "gemini-3.1-flash-lite",
     "gemini_tts_model": "gemini-2.5-flash-preview-tts",
     "romance_mode": True,
     "romance_address_style": "sweet_wife",

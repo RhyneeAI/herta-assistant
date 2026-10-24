@@ -113,7 +113,16 @@ BUILTIN_MOMENTS = [
 ]
 
 
-def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str, romance_style: str = "sweet_wife", subtitle_lang: str = "id") -> dict:
+FALLBACK_CHAT_MODELS = [
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+]
+
+
+def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str = "gemini-3.1-flash-lite", romance_style: str = "sweet_wife", subtitle_lang: str = "id") -> dict:
     """Generate dynamic companion dialogue using Gemini LLM if API key is present."""
     if not api_key:
         return None
@@ -155,39 +164,49 @@ def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str, ro
         f"{sub_rule}"
     )
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{chat_model}:generateContent?key={api_key}"
+    models_to_try = [chat_model] + [m for m in FALLBACK_CHAT_MODELS if m != chat_model]
     payload = {
         "contents": [{"parts": [{"text": prompt}]}]
     }
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST"
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if parts:
-                    text = parts[0].get("text", "")
-                    jp_line = ""
-                    sub_line = ""
-                    for line in text.splitlines():
-                        line_clean = line.strip()
-                        upper = line_clean.upper()
-                        if upper.startswith("JP:"):
-                            jp_line = line_clean[3:].strip()
-                        elif upper.startswith("SUB:"):
-                            sub_line = line_clean[4:].strip()
-                        elif upper.startswith("ID:") or upper.startswith("EN:"):
-                            sub_line = line_clean[3:].strip()
-                    if jp_line and sub_line:
-                        return {"jp": jp_line, "sub": sub_line}
-    except Exception as exc:
-        sys.stderr.write(f"Dynamic moment generation error: {exc}\n")
+    encoded = json.dumps(payload).encode("utf-8")
+
+    for m in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
+        req = urllib.request.Request(
+            url,
+            data=encoded,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        text = parts[0].get("text", "")
+                        jp_line = ""
+                        sub_line = ""
+                        for line in text.splitlines():
+                            line_clean = line.strip()
+                            upper = line_clean.upper()
+                            if upper.startswith("JP:"):
+                                jp_line = line_clean[3:].strip()
+                            elif upper.startswith("SUB:"):
+                                sub_line = line_clean[4:].strip()
+                            elif subtitle_lang == "id" and upper.startswith("ID:"):
+                                sub_line = line_clean[3:].strip()
+                            elif subtitle_lang == "en" and upper.startswith("EN:"):
+                                sub_line = line_clean[3:].strip()
+                        if jp_line and sub_line:
+                            return {"jp": jp_line, "sub": sub_line}
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429:
+                continue
+            sys.stderr.write(f"Dynamic moment HTTP error on {m}: {exc}\n")
+        except Exception as exc:
+            sys.stderr.write(f"Dynamic moment error on {m}: {exc}\n")
 
     return None
 
@@ -197,7 +216,7 @@ def trigger_spontaneous_interaction():
     cfg = load_config()
     partner = cfg.get("partner_name", "あなた")
     api_key = cfg.get("gemini_api_key", "")
-    chat_model = cfg.get("gemini_chat_model", "gemini-3.5-flash")
+    chat_model = cfg.get("gemini_chat_model", "gemini-3.1-flash-lite")
     rvc_enabled = cfg.get("rvc_enabled", True)
     romance_style = cfg.get("romance_address_style", "sweet_wife")
     sub_lang = cfg.get("subtitle_language", "id")

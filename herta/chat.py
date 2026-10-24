@@ -114,8 +114,25 @@ def parse_reply(text: str, target_lang: str = "id"):
     return jp, sub
 
 
-def transcribe_audio(audio_path: str, api_key: str, chat_model: str) -> str:
-    """Transcribe microphone WAV audio using Gemini API."""
+FALLBACK_CHAT_MODELS = [
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.5-flash",
+]
+
+FALLBACK_TRANSCRIBE_MODELS = [
+    "gemini-3.5-transcribe",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+]
+
+
+def transcribe_audio(audio_path: str, api_key: str, chat_model: str = "gemini-3.1-flash-lite") -> str:
+    """Transcribe microphone WAV audio using Gemini API with automatic model fallback."""
     if not os.path.exists(audio_path) or os.path.getsize(audio_path) < 2000 or not api_key:
         return ""
 
@@ -126,60 +143,84 @@ def transcribe_audio(audio_path: str, api_key: str, chat_model: str) -> str:
         "Transcribe this audio recording verbatim in its original language (Indonesian, Japanese, or English). "
         "Return ONLY the transcribed text without quotes or explanations."
     )
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{chat_model}:generateContent?key={api_key}"
-    payload = {
-        "contents": [{
-            "parts": [
-                {"text": prompt},
-                {"inlineData": {"mimeType": "audio/wav", "data": audio_b64}}
-            ]
-        }]
-    }
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST"
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if parts:
-                    return parts[0].get("text", "").strip()
-    except Exception as exc:
-        sys.stderr.write(f"Transcription error: {exc}\n")
+    models_to_try = [chat_model] + [m for m in FALLBACK_TRANSCRIBE_MODELS if m != chat_model]
+
+    for model_name in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": prompt},
+                    {"inlineData": {"mimeType": "audio/wav", "data": audio_b64}}
+                ]
+            }]
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "").strip()
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429:
+                sys.stderr.write(f"Transcription rate limit (429) on {model_name}. Trying fallback model...\n")
+                continue
+            sys.stderr.write(f"Transcription HTTP error on {model_name}: {exc}\n")
+        except Exception as exc:
+            sys.stderr.write(f"Transcription error on {model_name}: {exc}\n")
+
     return ""
 
 
-def generate_llm_reply(history: list, prompt: str, api_key: str, chat_model: str) -> str:
-    """Generate conversational reply using Gemini API."""
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{chat_model}:generateContent?key={api_key}"
+def generate_llm_reply(history: list, prompt: str, api_key: str, chat_model: str = "gemini-3.1-flash-lite", sub_lang: str = "id") -> str:
+    """Generate conversational reply using Gemini API with automatic 429 quota fallback."""
+    models_to_try = [chat_model] + [m for m in FALLBACK_CHAT_MODELS if m != chat_model]
     contents = [{"role": msg["role"], "parts": [{"text": msg["text"]}]} for msg in history]
     payload = {
         "systemInstruction": {"parts": [{"text": prompt}]},
         "contents": contents
     }
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST"
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if parts:
-                    return parts[0].get("text", "").strip()
-    except Exception as exc:
-        sys.stderr.write(f"Gemini LLM error: {exc}\n")
+    encoded_payload = json.dumps(payload).encode("utf-8")
 
-    return "JP: あれ？ちょっと通信が途切れちゃったわ。もう一回言って、あなた？\nID: Ara? Koneksiku sempat terputus sebentar. Boleh diulang lagi, sayang?"
+    for model_name in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        req = urllib.request.Request(
+            url,
+            data=encoded_payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        text = parts[0].get("text", "").strip()
+                        if text:
+                            return text
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429:
+                sys.stderr.write(f"[Gemini Quota] 429 Too Many Requests on {model_name}. Falling back to next model...\n")
+                continue
+            sys.stderr.write(f"Gemini LLM error on {model_name}: {exc}\n")
+        except Exception as exc:
+            sys.stderr.write(f"Gemini LLM error on {model_name}: {exc}\n")
+
+    # If all models in the fallback chain hit 429 rate limit
+    if sub_lang == "en":
+        return "JP: ねえ、あなた…Gemini APIの利用制限（429 Too Many Requests）にかかっちゃったみたい。少し時間を置くか、新しいAPIキーを設定してね？\nSUB: Darling... our Gemini API quota has hit the rate limit (HTTP 429 Too Many Requests). Please wait a moment or update your API key, okay?"
+    else:
+        return "JP: ねえ、あなた…Gemini APIの利用制限（429 Too Many Requests）にかかっちゃったみたい。少し時間を置くか、新しいAPIキーを設定してね？\nSUB: Sayangku... kuota Gemini API kita sedang mencapai limit (HTTP 429 Too Many Requests). Tunggu beberapa saat atau perbarui API Key kamu ya?"
 
 
 def speak(jp_text: str, rvc_enabled: bool = True):
@@ -364,7 +405,7 @@ def start_chat(fast_mode: bool = False):
         conversation_history.append({"role": "user", "text": user_text})
 
         print("⏳ Madam Herta is thinking...")
-        reply_raw = generate_llm_reply(conversation_history, system_prompt, api_key, chat_model)
+        reply_raw = generate_llm_reply(conversation_history, system_prompt, api_key, chat_model, sub_lang=sub_lang)
         reply_jp, reply_sub = parse_reply(reply_raw, target_lang=sub_lang)
 
         print(f"\n🤖 Madam Herta:")
