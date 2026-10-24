@@ -207,9 +207,13 @@ def run_windows_monitor():
 
 def run_monitor():
     """Run power event listener loop and spontaneous companion thread."""
+    cfg = load_config()
+    min_m = int(cfg.get("companion_min_minutes", 20))
+    max_m = int(cfg.get("companion_max_minutes", 45))
+
     companion_thread = threading.Thread(
         target=run_companion_loop,
-        kwargs={"min_interval_minutes": 45, "max_interval_minutes": 90},
+        kwargs={"min_interval_minutes": min_m, "max_interval_minutes": max_m},
         daemon=True
     )
     companion_thread.start()

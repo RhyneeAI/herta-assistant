@@ -59,6 +59,8 @@ def main():
     config_parser.add_argument("--key", type=str, help="Set Gemini API key")
     config_parser.add_argument("--rvc", choices=["on", "off"], help="Enable or disable RVC by default")
     config_parser.add_argument("--romance", choices=["on", "off"], help="Enable or disable romance mode (intimate wife tone)")
+    config_parser.add_argument("--companion-min", type=int, help="Minimum companion interval in minutes")
+    config_parser.add_argument("--companion-max", type=int, help="Maximum companion interval in minutes")
 
     args = parser.parse_args()
 
@@ -106,6 +108,12 @@ def main():
             changed = True
         if args.romance:
             cfg["romance_mode"] = (args.romance == "on")
+            changed = True
+        if args.companion_min is not None:
+            cfg["companion_min_minutes"] = max(1, args.companion_min)
+            changed = True
+        if args.companion_max is not None:
+            cfg["companion_max_minutes"] = max(1, args.companion_max)
             changed = True
 
         if changed:

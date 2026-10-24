@@ -176,16 +176,21 @@ def trigger_spontaneous_interaction():
     play_audio(final_audio, timeout=15)
 
 
-def run_companion_loop(min_interval_minutes: int = 45, max_interval_minutes: int = 90):
+def run_companion_loop(min_interval_minutes: int = 20, max_interval_minutes: int = 45):
     """
     Run continuous background companion loop.
     Periodically checks in on the user with randomized natural intervals.
     """
     print(f"💎 Madam Herta Companion Mode ACTIVE.")
-    print(f"She will spontaneously interact every {min_interval_minutes} to {max_interval_minutes} minutes.")
+    print(f"Spontaneous check-in default range: {min_interval_minutes} to {max_interval_minutes} minutes.")
 
     while True:
-        wait_seconds = random.randint(min_interval_minutes * 60, max_interval_minutes * 60)
+        cfg = load_config()
+        min_m = int(cfg.get("companion_min_minutes", min_interval_minutes))
+        max_m = int(cfg.get("companion_max_minutes", max_interval_minutes))
+        if min_m > max_m:
+            min_m, max_m = max_m, min_m
+        wait_seconds = random.randint(max(1, min_m) * 60, max(1, max_m) * 60)
         time.sleep(wait_seconds)
         try:
             trigger_spontaneous_interaction()

@@ -84,6 +84,8 @@ The installer will:
 | `herta config` | View current configuration settings |
 | `herta config --name <name>` | Change your registered partner name |
 | `herta config --key <api_key>` | Set or update your Google Gemini API key |
+| `herta config --companion-min <m>` | Set minimum companion check-in interval in minutes |
+| `herta config --companion-max <m>` | Set maximum companion check-in interval in minutes |
 
 ---
 
