@@ -13,7 +13,7 @@ Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎は
 * **Indonesian Subtitles**:
   Every response displays the Japanese line alongside an Indonesian translation subtitle.
 * **Proactive Companion & Wife Mode**:
-  Periodically and spontaneously checks in on you (every 45–90 minutes), asking if you're tired, reminding you to drink water, acting bored and demanding attention, or sharing sweet tsundere praise (*"Nee, anata~ Watashi chotto taikutsu nandakedo!"*).
+  Periodically and spontaneously checks in on you (customizable, default: every 20–45 minutes), asking if you're tired, reminding you to drink water, acting bored and demanding attention, or sharing sweet tsundere praise (*"Nee, anata~ Watashi chotto taikutsu nandakedo!"*).
 * **Boot & Login Greeting**:
   Plays time-contextual voicelines (morning, afternoon, evening) when your computer starts or logs in.
 * **Sleep & Wake Monitor**:
@@ -67,25 +67,81 @@ The installer will:
 
 ## 💻 Usage & Commands
 
-| Command | Description |
-| :--- | :--- |
-| `herta` or `herta chat` | Start interactive live voice chat session |
-| `herta chat --fast` | Chat in Fast Mode (Instant Japanese TTS without RVC) |
-| `herta greet` | Trigger the startup / login voice greeting |
-| `herta sleep` | Manually trigger the bedtime voiceline |
-| `herta wake` | Manually trigger the wake-up voiceline |
-| `herta nudge` or `herta companion --now` | Trigger a spontaneous companion interaction right now |
-| `herta companion` | Run the standalone companion loop in foreground |
-| `herta monitor` | Run background sleep/wake power monitor + companion daemon |
-| `herta service status` | Inspect whether background monitor daemon is active |
-| `herta service on` | Start and enable background service at boot |
-| `herta service off` | Stop and disable background service |
-| `herta service restart` | Restart background service |
-| `herta config` | View current configuration settings |
-| `herta config --name <name>` | Change your registered partner name |
-| `herta config --key <api_key>` | Set or update your Google Gemini API key |
-| `herta config --companion-min <m>` | Set minimum companion check-in interval in minutes |
-| `herta config --companion-max <m>` | Set maximum companion check-in interval in minutes |
+### CLI Command Reference
+
+| Command | Option / Flag | Description |
+| :--- | :--- | :--- |
+| `herta` or `herta chat` | `[--fast]` | Start live voice chat session. `--fast` uses instant Edge-TTS without RVC conversion. |
+| `herta greet` | *None* | Trigger time-aware login/startup voice greeting (morning, afternoon, evening). |
+| `herta sleep` | *None* | Manually trigger bedtime / going-to-sleep voiceline. |
+| `herta wake` | *None* | Manually trigger resume / wake-up voiceline. |
+| `herta nudge` | *None* | Ask Madam Herta to say something sweet, tease you, or check in on you right now. |
+| `herta companion` | `[--now]`<br>`[--interval <m>]` | Run companion loop in foreground. `--now` fires an interaction immediately. |
+| `herta monitor` | *None* | Run background power listener (sleep/wake events) and companion daemon. |
+| `herta service on` | *None* | Enable and start background daemon (`systemd` on Linux, Startup on Windows). |
+| `herta service off` | *None* | Stop and disable background service. |
+| `herta service restart` | *None* | Restart background service to reload changes. |
+| `herta service status` | *None* | Check whether background service is currently running. |
+| `herta config` | *See below* | View or update configuration values directly via CLI. |
+
+### CLI Configuration Flags (`herta config`)
+
+```bash
+herta config [OPTIONS]
+```
+
+| Option | Argument Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--name` | `string` | `"あなた"` | Set the partner name or title Herta uses to address you. |
+| `--key` | `string` | `""` | Set or update your Google Gemini API key. |
+| `--rvc` | `on` \| `off` | `on` | Enable or disable high-fidelity RVC Yamazaki Haruka voice transformation. |
+| `--romance` | `on` \| `off` | `on` | Enable or disable affectionate anime wife mode (intimate Japanese inflections). |
+| `--companion-min` | `integer` | `20` | Minimum wait interval (in minutes) for spontaneous companion check-ins. |
+| `--companion-max` | `integer` | `45` | Maximum wait interval (in minutes) for spontaneous companion check-ins. |
+
+---
+
+## ⚙️ Configuration Reference (`config.json`)
+
+Configuration settings are stored in JSON format and loaded automatically at startup:
+* **Linux**: `~/.config/herta/config.json`
+* **Windows**: `%APPDATA%\HertaAssistant\config.json`
+
+### Example `config.json`
+
+```json
+{
+  "partner_name": "あなた",
+  "gemini_api_key": "YOUR_GEMINI_API_KEY",
+  "rvc_enabled": true,
+  "rvc_model_path": "/mnt/games/rvc_models/model.pth",
+  "rvc_index_path": "/mnt/games/rvc_models/model.index",
+  "tts_voice": "ja-JP-NanamiNeural",
+  "gemini_chat_model": "gemini-3.5-flash",
+  "gemini_tts_model": "gemini-2.5-flash-preview-tts",
+  "romance_mode": true,
+  "romance_address_style": "sweet_wife",
+  "companion_min_minutes": 20,
+  "companion_max_minutes": 45
+}
+```
+
+### Key Descriptions & Parameters
+
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `partner_name` | `string` | `"あなた"` | How Madam Herta addresses you in conversation and notifications. When set to `"あなた"` (*Anata*), it conveys an intimate, affectionate tone like an anime wife addressing her husband, accompanied by the Indonesian subtitle translation *"Sayang"*. You can also customize it to your name (e.g. `"Rinne"`) or title (e.g. `"夫"` / *Danna-sama*). |
+| `gemini_api_key` | `string` | `""` | Google Gemini API Key used for dynamic chat reasoning, spontaneous dialogue generation, and fallback intelligence. Can also be set via the `GEMINI_API_KEY` environment variable or legacy `~/.gemini_api_key`. |
+| `rvc_enabled` | `boolean` | `true` | When `true`, all speech synthesis is converted through Retrieval-based Voice Conversion (RVC v2) using Yamazaki Haruka's official Herta voice weights. When `false`, uses raw Edge-TTS for ultra-fast response without neural pitch modeling. |
+| `rvc_model_path` | `string` | Path | Absolute path to the trained RVC `.pth` checkpoint file. Defaults to `/mnt/games/rvc_models/model.pth` on Linux or `%APPDATA%\HertaAssistant\models\model.pth` on Windows. |
+| `rvc_index_path` | `string` | Path | Absolute path to the trained RVC `.index` feature retrieval index file. Enhances acoustic timbre matching and prevents voice distortion. |
+| `tts_voice` | `string` | `"ja-JP-NanamiNeural"` | The base Microsoft Edge-TTS voice synthesized before RVC voice conversion. Pre-tuned with custom pitch (+8Hz) and rate (+2%) for lively Japanese intonation. |
+| `gemini_chat_model` | `string` | `"gemini-3.5-flash"` | The Gemini model identifier used for conversational LLM chat turns and generating spontaneous companion dialogues. |
+| `gemini_tts_model` | `string` | `"gemini-2.5-flash-preview-tts"` | Fallback cloud TTS model used if local neural TTS synthesis is unreachable. |
+| `romance_mode` | `boolean` | `true` | When `true`, engages Madam Herta's intimate anime wife persona. Prompts inject affectionate phrasing, playful tsundere teasing, loving pauses (`...`, `〜`), and sweet Japanese particles (`よ`, `ね`, `わ`). |
+| `romance_address_style` | `string` | `"sweet_wife"` | Preset addressing style for the romance engine. Configured to align Japanese respectful tenderness with warm Indonesian subtitles. |
+| `companion_min_minutes` | `integer` | `20` | Lower bound of the randomized spontaneous companion timer in minutes. Prevents check-ins from firing too frequently. |
+| `companion_max_minutes` | `integer` | `45` | Upper bound of the randomized spontaneous companion timer in minutes. Ensures Herta spontaneously checks in before you stay idle or overworked for too long. |
 
 ---
 
