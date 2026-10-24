@@ -77,6 +77,10 @@ The installer will:
 | `herta nudge` or `herta companion --now` | Trigger a spontaneous companion interaction right now |
 | `herta companion` | Run the standalone companion loop in foreground |
 | `herta monitor` | Run background sleep/wake power monitor + companion daemon |
+| `herta service status` | Inspect whether background monitor daemon is active |
+| `herta service on` | Start and enable background service at boot |
+| `herta service off` | Stop and disable background service |
+| `herta service restart` | Restart background service |
 | `herta config` | View current configuration settings |
 | `herta config --name <name>` | Change your registered partner name |
 | `herta config --key <api_key>` | Set or update your Google Gemini API key |

@@ -15,6 +15,7 @@ from herta.companion import run_companion_loop, trigger_spontaneous_interaction
 from herta.config import CONFIG_FILE, load_config, save_config
 from herta.greeting import trigger_greeting
 from herta.power_monitor import on_sleep, on_wake, run_monitor
+from herta.service import restart_service, show_service_status, start_service, stop_service
 
 
 def main():
@@ -33,6 +34,13 @@ def main():
 
     # Power monitor command
     subparsers.add_parser("monitor", help="Run background sleep and wake power event monitor")
+
+    # Service management command (on/off/status/restart)
+    service_parser = subparsers.add_parser("service", help="Manage background service (on/off/status/restart)")
+    service_parser.add_argument(
+        "action", nargs="?", choices=["on", "off", "start", "stop", "status", "restart"],
+        default="status", help="Service action: on, off, status, restart"
+    )
 
     # Direct sleep / wake triggers
     subparsers.add_parser("sleep", help="Trigger bedtime / sleep voiceline")
@@ -62,6 +70,16 @@ def main():
         trigger_greeting()
     elif args.command == "monitor":
         run_monitor()
+    elif args.command == "service":
+        action = getattr(args, "action", "status")
+        if action in ["on", "start"]:
+            start_service()
+        elif action in ["off", "stop"]:
+            stop_service()
+        elif action == "restart":
+            restart_service()
+        else:
+            show_service_status()
     elif args.command == "sleep":
         on_sleep()
     elif args.command == "wake":
