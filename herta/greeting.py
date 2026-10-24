@@ -1,0 +1,54 @@
+"""
+Startup and boot voice greeting module for Madam Herta.
+Plays pre-rendered authentic Yamazaki Haruka voiceline according to local time
+and shows desktop notification with Indonesian subtitle translation.
+"""
+
+import datetime
+import json
+import os
+
+from herta.audio import play_audio
+from herta.config import AUDIO_DIR, load_config
+from herta.notifier import show_notification
+
+
+def get_time_slot_key() -> str:
+    """Determine audio key based on current local hour."""
+    hour = datetime.datetime.now().hour
+    if 5 <= hour < 12:
+        return "herta_morning"
+    elif 12 <= hour < 18:
+        return "herta_afternoon"
+    else:
+        return "herta_evening"
+
+
+def trigger_greeting():
+    """Execute startup voice greeting."""
+    cfg = load_config()
+    partner_name = cfg.get("partner_name", "Rinne")
+    key = get_time_slot_key()
+
+    audio_file = os.path.join(AUDIO_DIR, f"{key}.wav")
+    meta_file = os.path.join(AUDIO_DIR, "voicelines.json")
+
+    jp_text = f"クルクル〜クルリン！こんにちは、{partner_name}！マダム・ヘルタよ。"
+    id_text = f"Kuru kuru~ Kururin! Halo, {partner_name}! Madam Herta di sini."
+
+    if os.path.exists(meta_file):
+        try:
+            with open(meta_file, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+                if key in meta:
+                    jp_text = meta[key].get("jp", jp_text).replace("リンネ", partner_name)
+                    id_text = meta[key].get("id", id_text).replace("Rinne", partner_name)
+        except Exception:
+            pass
+
+    # Display notification banner with subtitles
+    show_notification(f"💎 Madam Herta: {jp_text}", f"🇮🇩 {id_text}")
+
+    # Play authentic Yamazaki Haruka audio
+    if os.path.exists(audio_file):
+        play_audio(audio_file, timeout=15)
