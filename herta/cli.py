@@ -11,6 +11,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 from herta.chat import start_chat
+from herta.companion import run_companion_loop, trigger_spontaneous_interaction
 from herta.config import CONFIG_FILE, load_config, save_config
 from herta.greeting import trigger_greeting
 from herta.power_monitor import on_sleep, on_wake, run_monitor
@@ -37,6 +38,13 @@ def main():
     subparsers.add_parser("sleep", help="Trigger bedtime / sleep voiceline")
     subparsers.add_parser("wake", help="Trigger wake-from-sleep voiceline")
 
+    # Companion command
+    comp_parser = subparsers.add_parser("companion", help="Run proactive companion check-in daemon")
+    comp_parser.add_argument("--now", action="store_true", help="Trigger a spontaneous interaction immediately")
+    comp_parser.add_argument("--interval", type=int, default=60, help="Check-in interval in minutes")
+
+    subparsers.add_parser("nudge", help="Ask Madam Herta to say something cute / check in on you right now")
+
     # Configuration command
     config_parser = subparsers.add_parser("config", help="View or modify configuration")
     config_parser.add_argument("--name", type=str, help="Set partner name")
@@ -57,6 +65,14 @@ def main():
         on_sleep()
     elif args.command == "wake":
         on_wake()
+    elif args.command == "companion":
+        if getattr(args, "now", False):
+            trigger_spontaneous_interaction()
+        else:
+            interval = getattr(args, "interval", 60)
+            run_companion_loop(min_interval_minutes=max(15, interval - 15), max_interval_minutes=interval + 15)
+    elif args.command == "nudge":
+        trigger_spontaneous_interaction()
     elif args.command == "config":
         cfg = load_config()
         changed = False

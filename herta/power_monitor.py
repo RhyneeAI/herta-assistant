@@ -6,9 +6,11 @@ Supports Linux (systemd-logind DBus) and Windows (WM_POWERBROADCAST message loop
 import os
 import subprocess
 import sys
+import threading
 import time
 
 from herta.audio import play_audio
+from herta.companion import run_companion_loop
 from herta.config import AUDIO_DIR, IS_WINDOWS, load_config
 from herta.notifier import show_notification
 
@@ -149,7 +151,15 @@ def run_windows_monitor():
 
 
 def run_monitor():
-    """Run power event listener loop on the current OS."""
+    """Run power event listener loop and spontaneous companion thread."""
+    # Launch proactive companion background thread (check-ins every 45-90 minutes)
+    companion_thread = threading.Thread(
+        target=run_companion_loop,
+        kwargs={"min_interval_minutes": 45, "max_interval_minutes": 90},
+        daemon=True
+    )
+    companion_thread.start()
+
     if IS_WINDOWS:
         run_windows_monitor()
     else:

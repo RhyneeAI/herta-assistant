@@ -12,6 +12,8 @@ Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎は
   Trained on official voicelines from Honkai: Star Rail via RVC v2 (Retrieval-based Voice Conversion) for genuine anime seiyuu cadence and tone.
 * **Indonesian Subtitles**:
   Every response displays the Japanese line alongside an Indonesian translation subtitle.
+* **Proactive Companion & Wife Mode**:
+  Periodically and spontaneously checks in on you (every 45–90 minutes), asking if you're tired, reminding you to drink water, acting bored and demanding attention, or sharing sweet tsundere praise (*"Nee, anata~ Watashi chotto taikutsu nandakedo!"*).
 * **Boot & Login Greeting**:
   Plays time-contextual voicelines (morning, afternoon, evening) when your computer starts or logs in.
 * **Sleep & Wake Monitor**:
@@ -72,7 +74,9 @@ The installer will:
 | `herta greet` | Trigger the startup / login voice greeting |
 | `herta sleep` | Manually trigger the bedtime voiceline |
 | `herta wake` | Manually trigger the wake-up voiceline |
-| `herta monitor` | Run the sleep/wake power event background monitor |
+| `herta nudge` or `herta companion --now` | Trigger a spontaneous companion interaction right now |
+| `herta companion` | Run the standalone companion loop in foreground |
+| `herta monitor` | Run background sleep/wake power monitor + companion daemon |
 | `herta config` | View current configuration settings |
 | `herta config --name <name>` | Change your registered partner name |
 | `herta config --key <api_key>` | Set or update your Google Gemini API key |
