@@ -25,19 +25,20 @@ def download_and_setup_models():
         print(f"Herta JP models already exist in: {MODEL_DIR}")
         return
 
-    # Check if local files exist on Linux (/mnt/games/rvc_models)
-    local_source = "/mnt/games/rvc_models"
-    if not IS_WINDOWS and os.path.exists(os.path.join(local_source, "model.pth")):
-        print(f"Linking existing models from {local_source}...")
+    # Check if local files exist on Windows (D:\rvc_models) or Linux (/mnt/games/rvc_models)
+    local_source = "D:\\rvc_models" if IS_WINDOWS else "/mnt/games/rvc_models"
+    if os.path.exists(os.path.join(local_source, "model.pth")):
+        print(f"Linking existing models from local directory: {local_source}...")
         try:
             if not os.path.exists(pth_dest):
-                os.symlink(os.path.join(local_source, "model.pth"), pth_dest)
-            if not os.path.exists(index_dest):
-                os.symlink(os.path.join(local_source, "model.index"), index_dest)
+                shutil.copyfile(os.path.join(local_source, "model.pth"), pth_dest)
+            if not os.path.exists(index_dest) and os.path.exists(os.path.join(local_source, "model.index")):
+                shutil.copyfile(os.path.join(local_source, "model.index"), index_dest)
             print("Successfully linked local models.")
             return
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"Local link error: {exc}")
+
 
     print(f"Downloading Herta JP RVC model from Hugging Face...")
     zip_dest = os.path.join(MODEL_DIR, "HertaJP.zip")

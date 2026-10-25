@@ -129,12 +129,17 @@ herta gui
 | :--- | :--- | :--- |
 | `herta gui` | *None* | Launch Madam Herta Desktop Mascot & System Tray GUI. |
 | `herta` or `herta chat` | `[--fast]` | Start live voice chat session in terminal. `--fast` uses instant Edge-TTS. |
+| `herta alarm` | `[list]` | View all currently scheduled alarms and active countdown timers. |
+| `herta alarm add` | `<time> [label]` | Set a daily scheduled alarm (e.g. `herta alarm add 07:00 "Bangun Pagi"`). |
+| `herta alarm timer` | `<minutes> [label]` | Set a countdown timer (e.g. `herta alarm timer 25 "Pomodoro Break"`). |
+| `herta alarm delete` | `<id>` | Delete an alarm or timer by its unique ID. |
+| `herta alarm test` | *None* | Test Madam Herta wake-up voice and pop-up dialog immediately. |
 | `herta greet` | *None* | Trigger time-aware login/startup voice greeting (morning, afternoon, evening). |
 | `herta sleep` | *None* | Manually trigger bedtime / going-to-sleep voiceline. |
 | `herta wake` | *None* | Manually trigger resume / wake-up voiceline. |
 | `herta nudge` | *None* | Ask Madam Herta to say something sweet, tease you, or check in on you right now. |
 | `herta companion` | `[--now]`<br>`[--interval <m>]` | Run companion loop in foreground. `--now` fires an interaction immediately. |
-| `herta monitor` | *None* | Run background power listener (sleep/wake events) and companion daemon. |
+| `herta monitor` | *None* | Run background power listener (sleep/wake events), companion daemon, and alarm scheduler. |
 | `herta service on` | *None* | Enable and start background daemon (`systemd` on Linux, Startup on Windows). |
 | `herta service off` | *None* | Stop and disable background service. |
 | `herta service restart` | *None* | Restart background service to reload changes. |
@@ -157,6 +162,9 @@ herta config [OPTIONS]
 | `--lang` | `id` \| `en` | `id` | Choose subtitle translation language: `id` (Indonesian, default) or `en` (English). |
 | `--companion-min` | `integer` | `20` | Minimum wait interval (in minutes) for spontaneous companion check-ins. |
 | `--companion-max` | `integer` | `45` | Maximum wait interval (in minutes) for spontaneous companion check-ins. |
+| `--telegram-token` | `string` | `""` | Optional Telegram Bot Token to forward alarm alerts directly to your phone. |
+| `--telegram-chat-id` | `string` | `""` | Optional Telegram Chat ID to receive phone alarm alerts. |
+
 
 ---
 

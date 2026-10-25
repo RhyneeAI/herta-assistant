@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 
+from herta.alarm import run_alarm_scheduler_loop
 from herta.audio import play_audio
 from herta.companion import run_companion_loop
 from herta.config import AUDIO_DIR, CACHE_DIR, IS_WINDOWS, load_config
@@ -141,6 +142,9 @@ def run_linux_monitor():
         sys.stderr.write(f"Failed to start gdbus monitor: {exc}\n")
         return
 
+    if proc.stdout is None:
+        return
+
     try:
         for line in proc.stdout:
             if "PrepareForSleep (true," in line:
@@ -150,6 +154,7 @@ def run_linux_monitor():
     finally:
         if proc:
             proc.terminate()
+
 
 
 def run_windows_monitor():
@@ -212,7 +217,7 @@ def run_windows_monitor():
 
 
 def run_monitor():
-    """Run power event listener loop and spontaneous companion thread."""
+    """Run power event listener loop, companion check-in thread, and alarm scheduler."""
     cfg = load_config()
     min_m = int(cfg.get("companion_min_minutes", 20))
     max_m = int(cfg.get("companion_max_minutes", 45))
@@ -224,7 +229,14 @@ def run_monitor():
     )
     companion_thread.start()
 
+    alarm_thread = threading.Thread(
+        target=run_alarm_scheduler_loop,
+        daemon=True
+    )
+    alarm_thread.start()
+
     if IS_WINDOWS:
         run_windows_monitor()
     else:
         run_linux_monitor()
+

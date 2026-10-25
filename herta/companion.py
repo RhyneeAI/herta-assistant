@@ -12,6 +12,8 @@ import os
 import random
 import sys
 import time
+import urllib.error
+import urllib.request
 
 from herta.audio import play_audio
 from herta.config import AUDIO_DIR, TMP_DIR, load_config
@@ -136,12 +138,11 @@ FALLBACK_CHAT_MODELS = [
 ]
 
 
-def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str = "gemini-3.1-flash-lite", romance_style: str = "sweet_wife", subtitle_lang: str = "id") -> dict:
+def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str = "gemini-3.1-flash-lite", romance_style: str = "sweet_wife", subtitle_lang: str = "id") -> dict | None:
     """Generate dynamic companion dialogue using Gemini LLM if API key is present."""
+
     if not api_key:
         return None
-
-    import urllib.request
 
     if romance_style == "yandere":
         mood = random.choice([
@@ -265,16 +266,19 @@ def trigger_spontaneous_interaction(force_dynamic: bool = False):
             sweet_moments = [m for m in BUILTIN_MOMENTS if m.get("category") != "yandere"]
             chosen = random.choice(sweet_moments if sweet_moments else BUILTIN_MOMENTS)
 
-        jp_text = chosen["jp"].replace("あなた", partner)
+        jp_raw = chosen.get("jp") or ""
+        jp_text = jp_raw.replace("あなた", partner)
         if sub_lang == "en":
             flag = "🇬🇧"
-            sub_raw = chosen.get("en", chosen.get("id"))
+            sub_raw = chosen.get("en") or chosen.get("id") or ""
             sub_text = sub_raw.replace("darling", "darling" if partner == "あなた" else partner)
         else:
             flag = "🇮🇩"
-            sub_raw = chosen.get("id", chosen.get("en"))
+            sub_raw = chosen.get("id") or chosen.get("en") or ""
             sub_text = sub_raw.replace("sayang", "sayang" if partner == "あなた" else partner)
         audio_file = chosen.get("audio_file")
+
+
 
     # 1. Desktop banner notification with Herta avatar icon
     show_notification(f"Madam Herta: {jp_text}", f"{flag} {sub_text}")

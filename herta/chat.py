@@ -8,12 +8,14 @@ import base64
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 
 from herta.audio import play_audio, record_microphone
 from herta.config import AUDIO_DIR, load_config, save_config
-from herta.rvc import convert_voice, get_rvc_loader
+from herta.rvc import convert_voice, get_rvc_loader, preload_rvc_in_background
 from herta.tts import synthesize_speech
+
 
 
 def build_system_prompt(
@@ -68,10 +70,13 @@ def build_system_prompt(
             "You are MADAM HERTA (ヘルタ / The Herta), Genius Society #83 from Honkai: Star Rail!\n"
             f"You are speaking to your husband and partner '{partner_name}'.\n\n"
             f"{persona_block}\n\n"
+            "ACTION COMMANDS:\n"
+            "- If the user asks you to set an alarm, wake them up, or set a countdown timer, acknowledge it sweetly and add on a new line:\n"
+            "  [ACTION:SET_ALARM time=\"HH:MM\" label=\"...\"] or [ACTION:SET_TIMER minutes=N label=\"...\"]\n\n"
             "STRICT OUTPUT FORMAT:\n"
-            "Output EXACTLY 2 lines. Do NOT output translations in any other languages.\n"
             "Line 1 MUST be JP: <Intimate Japanese spoken by Herta>\n"
-            f"Line 2 MUST be {sub_desc}\n\n"
+            f"Line 2 MUST be {sub_desc}\n"
+            "Line 3 (optional, only when alarm requested): [ACTION:SET_ALARM time=\"...\" label=\"...\"]\n\n"
             "Example:\n"
             "JP: ねえ、あなた…今日も頑張っててえらいわね。ふふっ、私の自慢の旦那様なんだから！\n"
             f"{sub_example}"
@@ -85,11 +90,12 @@ def build_system_prompt(
             "- Voice: Authentic Japanese anime seiyuu style (VA: Yamazaki Haruka).\n"
             "- Catchphrases: 'クルクル〜クルリン！', 'こんにちは！', 'ちょっと待って！', '面倒くさいわね〜'.\n"
             f"- Address the user as '{partner_name}'.\n"
-            "- Keep replies concise (1 to 2 sentences).\n\n"
+            "- Keep replies concise (1 to 2 sentences).\n"
+            "- If asked to set an alarm or timer, add [ACTION:SET_ALARM time=\"HH:MM\" label=\"...\"] on line 3.\n\n"
             "STRICT OUTPUT FORMAT:\n"
-            "Output EXACTLY 2 lines. Do NOT output translations in other languages.\n"
             "Line 1 MUST be JP: <Natural, expressive Japanese spoken by Herta>\n"
-            f"Line 2 MUST be {sub_desc}"
+            f"Line 2 MUST be {sub_desc}\n"
+            "Line 3 (optional): [ACTION:SET_ALARM time=\"...\" label=\"...\"]"
         )
 
 
@@ -99,6 +105,8 @@ def parse_reply(text: str, target_lang: str = "id"):
     sub = ""
     for line in text.strip().splitlines():
         line_clean = line.strip()
+        if line_clean.startswith("[ACTION:"):
+            continue
         upper = line_clean.upper()
         if upper.startswith("JP:"):
             jp = line_clean[3:].strip()
@@ -110,8 +118,29 @@ def parse_reply(text: str, target_lang: str = "id"):
             sub = line_clean[3:].strip()
 
     if not jp:
-        jp = text.strip()
+        clean_lines = [l for l in text.strip().splitlines() if not l.strip().startswith("[")]
+        jp = "\n".join(clean_lines).strip()
     return jp, sub
+
+
+def process_alarm_intent_and_execute(reply_raw: str, user_text: str = "") -> dict | None:
+    """Detect alarm or timer intent from either user text or LLM reply, and execute it."""
+    from herta.alarm import add_alarm, add_timer, parse_alarm_intent
+    intent = parse_alarm_intent(reply_raw)
+    if not intent and user_text:
+        intent = parse_alarm_intent(user_text)
+
+    if intent:
+        act = intent.get("action")
+        try:
+            if act == "add_alarm":
+                return add_alarm(intent["time"], label=intent.get("label", "Alarm"), once=intent.get("once", False))
+            elif act == "add_timer":
+                return add_timer(intent["minutes"], label=intent.get("label", "Timer"))
+        except Exception as exc:
+            sys.stderr.write(f"Alarm auto-set error: {exc}\n")
+    return None
+
 
 
 FALLBACK_CHAT_MODELS = [
@@ -244,7 +273,10 @@ def start_chat(fast_mode: bool = False):
     partner = cfg.get("partner_name", "あなた")
     chat_model = cfg.get("gemini_chat_model", "gemini-3.5-flash")
     rvc_active = not fast_mode and cfg.get("rvc_enabled", True)
+    if rvc_active:
+        preload_rvc_in_background()
     romance_mode = cfg.get("romance_mode", True)
+
     romance_style = cfg.get("romance_address_style", "sweet_wife")
     sub_lang = cfg.get("subtitle_language", "id")
 
@@ -408,16 +440,38 @@ def start_chat(fast_mode: bool = False):
             print("⚡ Voice Mode: Fast TTS ACTIVE (No RVC).\n")
             continue
 
+        if user_text.lower() in ["alarms", "list alarm", "alarm list"]:
+            from herta.alarm import load_alarms
+            alarms = load_alarms()
+            print("\n" + "=" * 50)
+            print("💎   MADAM HERTA ALARMS & TIMERS")
+            print("=" * 50)
+            if not alarms:
+                print(" Belum ada alarm atau timer aktif.")
+            else:
+                for idx, a in enumerate(alarms, 1):
+                    a_type = a.get("type", "alarm").upper()
+                    t_val = a.get("time") or a.get("target_time_str")
+                    print(f" {idx}. [{a_type}] {t_val} - {a.get('label')} (ID: {a.get('id')})")
+            print("=" * 50 + "\n")
+            continue
+
         conversation_history.append({"role": "user", "text": user_text})
 
         print("⏳ Madam Herta is thinking...")
         reply_raw = generate_llm_reply(conversation_history, system_prompt, api_key, chat_model, sub_lang=sub_lang)
         reply_jp, reply_sub = parse_reply(reply_raw, target_lang=sub_lang)
 
+        alarm_res = process_alarm_intent_and_execute(reply_raw, user_text)
+
         print(f"\n🤖 Madam Herta:")
         print(f"   🇯🇵 「{reply_jp}」")
         if reply_sub:
             print(f"   {sub_flag} ({reply_sub})")
+        if alarm_res:
+            a_type = alarm_res.get("type", "alarm").upper()
+            t_info = alarm_res.get("time") or alarm_res.get("target_time_str")
+            print(f"   ⏰ [{a_type} TERDAFTAR]: {t_info} - '{alarm_res.get('label')}' (Madam Herta siap membangunkanmu!)")
         print()
 
         conversation_history.append({"role": "model", "text": f"JP: {reply_jp}\nSUB: {reply_sub}"})

@@ -137,9 +137,15 @@ class ChatWorker(QThread):
         try:
             reply_raw = generate_llm_reply(turns, system_prompt, api_key, chat_model, sub_lang=sub_lang)
             reply_jp, reply_sub = parse_reply(reply_raw, target_lang=sub_lang)
+            from herta.chat import process_alarm_intent_and_execute
+            alarm_res = process_alarm_intent_and_execute(reply_raw, user_text)
+            if alarm_res:
+                t_val = alarm_res.get("time") or alarm_res.get("target_time_str")
+                reply_sub += f" [⏰ Alarm: {t_val} - {alarm_res.get('label')}]"
             self.reply_ready.emit(user_text, reply_jp, reply_sub)
         except Exception as exc:
             self.error_occurred.emit(f"LLM Error: {exc}")
+
 
 
 class CompanionWorker(QThread):
@@ -171,13 +177,18 @@ class CompanionWorker(QThread):
                     s_moments = [m for m in BUILTIN_MOMENTS if m.get("category") != "yandere"]
                     chosen = random.choice(s_moments if s_moments else BUILTIN_MOMENTS)
 
-                jp_text = chosen["jp"].replace("あなた", partner)
+                jp_raw = chosen.get("jp") or ""
+                jp_text = jp_raw.replace("あなた", partner)
                 if sub_lang == "en":
                     flag = "🇬🇧"
-                    sub_text = chosen.get("en", chosen.get("id")).replace("darling", "darling" if partner == "あなた" else partner)
+                    sub_raw = chosen.get("en") or chosen.get("id") or ""
+                    sub_text = sub_raw.replace("darling", "darling" if partner == "あなた" else partner)
                 else:
                     flag = "🇮🇩"
-                    sub_text = chosen.get("id", chosen.get("en")).replace("sayang", "sayang" if partner == "あなた" else partner)
+                    sub_raw = chosen.get("id") or chosen.get("en") or ""
+                    sub_text = sub_raw.replace("sayang", "sayang" if partner == "あなた" else partner)
+
+
 
                 self.moment_triggered.emit(jp_text, sub_text, flag)
 
@@ -245,8 +256,10 @@ class FloatingMascot(QWidget):
     poke_triggered = pyqtSignal()
     kuru_triggered = pyqtSignal()
     chat_requested = pyqtSignal()
+    alarm_requested = pyqtSignal()
     hide_requested = pyqtSignal()
     quit_requested = pyqtSignal()
+
 
     def __init__(self):
         super().__init__()
@@ -338,6 +351,10 @@ class FloatingMascot(QWidget):
         btn_poke.setToolTip("Poke / Interact with Madam Herta")
         btn_poke.clicked.connect(self.poke_triggered.emit)
 
+        btn_alarm = QPushButton("⏰", self.toolbar)
+        btn_alarm.setToolTip("Alarms & Timers")
+        btn_alarm.clicked.connect(self.alarm_requested.emit)
+
         btn_hide = QPushButton("⬇️", self.toolbar)
         btn_hide.setToolTip("Hide Mascot to System Tray")
         btn_hide.clicked.connect(self.hide_requested.emit)
@@ -349,12 +366,15 @@ class FloatingMascot(QWidget):
         tb_layout.addWidget(btn_chat)
         tb_layout.addWidget(btn_kuru)
         tb_layout.addWidget(btn_poke)
+        tb_layout.addWidget(btn_alarm)
         tb_layout.addWidget(btn_hide)
         tb_layout.addWidget(btn_quit)
 
         layout.addWidget(self.toolbar, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    def eventFilter(self, watched, event):
+    def eventFilter(self, a0, a1):
+        watched = a0
+        event = a1
         if watched in [self.avatar_label, self.speech_bubble]:
             if event.type() == QEvent.Type.MouseButtonPress:
                 self.handle_mouse_press(event)
@@ -368,7 +388,8 @@ class FloatingMascot(QWidget):
             elif event.type() == QEvent.Type.ContextMenu:
                 self.contextMenuEvent(event)
                 return True
-        return super().eventFilter(watched, event)
+        return super().eventFilter(a0, a1)
+
 
     def handle_mouse_press(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -399,16 +420,17 @@ class FloatingMascot(QWidget):
                 self.save_position()
             event.accept()
 
-    def mousePressEvent(self, event):
-        self.handle_mouse_press(event)
+    def mousePressEvent(self, a0):
+        self.handle_mouse_press(a0)
 
-    def mouseMoveEvent(self, event):
-        self.handle_mouse_move(event)
+    def mouseMoveEvent(self, a0):
+        self.handle_mouse_move(a0)
 
-    def mouseReleaseEvent(self, event):
-        self.handle_mouse_release(event)
+    def mouseReleaseEvent(self, a0):
+        self.handle_mouse_release(a0)
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, a0):
+        event = a0
         menu = QMenu(self)
         menu.setStyleSheet("""
             QMenu {
@@ -445,10 +467,11 @@ class FloatingMascot(QWidget):
         elif action == act_quit:
             self.quit_requested.emit()
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Escape:
+    def keyPressEvent(self, a0):
+        if a0.key() == Qt.Key.Key_Escape:
             self.hide_requested.emit()
-        super().keyPressEvent(event)
+        super().keyPressEvent(a0)
+
 
     def save_position(self):
         cfg = load_config()
@@ -458,7 +481,8 @@ class FloatingMascot(QWidget):
 
     def restore_position(self):
         cfg = load_config()
-        screen = QApplication.primaryScreen().geometry()
+        primary = QApplication.primaryScreen()
+        screen = primary.geometry() if primary is not None else QRect(0, 0, 1920, 1080)
         default_x = screen.width() - 320
         default_y = screen.height() - 380
         x = cfg.get("mascot_x", default_x)
@@ -811,9 +835,12 @@ class ChatDialog(QDialog):
             b_layout.addWidget(lbl_sub)
 
         self.history_layout.addWidget(bubble)
-        QTimer.singleShot(50, lambda: self.scroll_area.verticalScrollBar().setValue(
-            self.scroll_area.verticalScrollBar().maximum()
-        ))
+        def _scroll_to_bottom():
+            vsb = self.scroll_area.verticalScrollBar()
+            if vsb is not None:
+                vsb.setValue(vsb.maximum())
+
+        QTimer.singleShot(50, _scroll_to_bottom)
 
     def add_initial_greeting(self):
         cfg = load_config()
@@ -911,7 +938,212 @@ class ChatDialog(QDialog):
         self.btn_mic.setEnabled(True)
 
 
+class AlarmWorker(QThread):
+    """Background worker monitoring alarms and timers while GUI is active."""
+    def run(self):
+        from herta.alarm import run_alarm_scheduler_loop
+        run_alarm_scheduler_loop(interval_sec=5)
+
+
+class AlarmDialog(QDialog):
+    """Glassmorphism cyberpunk dialog for managing alarms, timers, and alerts."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("⏰ Madam Herta - Alarms & Timers")
+        self.setFixedSize(520, 600)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #0f172a;
+                color: #f8fafc;
+                font-family: 'Segoe UI', sans-serif;
+            }
+            QLabel {
+                color: #e2e8f0;
+            }
+            QLineEdit {
+                background-color: #1e293b;
+                border: 1px solid #6366f1;
+                border-radius: 8px;
+                padding: 8px 12px;
+                color: #f8fafc;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #a855f7;
+            }
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #7c3aed, stop:1 #a855f7);
+                border: none;
+                border-radius: 8px;
+                color: white;
+                font-weight: bold;
+                padding: 8px 14px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #8b5cf6, stop:1 #c084fc);
+            }
+            QPushButton.secondary {
+                background-color: #334155;
+                color: #cbd5e1;
+            }
+            QPushButton.secondary:hover {
+                background-color: #475569;
+            }
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(14)
+
+        # 1. Header
+        header = QHBoxLayout()
+        title = QLabel("⏰ Alarms & Timers")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #c084fc;")
+        header.addWidget(title)
+        header.addStretch()
+
+        btn_test = QPushButton("🔔 Test Suara")
+        btn_test.clicked.connect(self.on_test_alarm)
+        header.addWidget(btn_test)
+        layout.addLayout(header)
+
+        # 2. Quick Timers Box
+        timer_box = QFrame()
+        timer_box.setStyleSheet("background-color: #1e1b4b; border-radius: 10px; padding: 10px; border: 1px solid #4338ca;")
+        tb_layout = QVBoxLayout(timer_box)
+        tb_title = QLabel("⚡ Quick Countdown Timers:")
+        tb_title.setStyleSheet("font-weight: bold; color: #e0e7ff; margin-bottom: 4px;")
+        tb_layout.addWidget(tb_title)
+
+        preset_layout = QHBoxLayout()
+        for label, mins in [("5m", 5), ("15m", 15), ("25m (Pomodoro)", 25), ("45m", 45)]:
+            btn = QPushButton(label)
+            btn.setProperty("class", "secondary")
+            btn.clicked.connect(lambda _, m=mins: self.on_add_timer(m))
+            preset_layout.addWidget(btn)
+        tb_layout.addLayout(preset_layout)
+        layout.addWidget(timer_box)
+
+        # 3. Add Scheduled Alarm Box
+        add_box = QFrame()
+        add_box.setStyleSheet("background-color: #1e293b; border-radius: 10px; padding: 10px; border: 1px solid #334155;")
+        ab_layout = QVBoxLayout(add_box)
+        ab_title = QLabel("➕ Tambah Alarm Jam Baru:")
+        ab_title.setStyleSheet("font-weight: bold; color: #e2e8f0; margin-bottom: 4px;")
+        ab_layout.addWidget(ab_title)
+
+        inputs_layout = QHBoxLayout()
+        self.input_time = QLineEdit()
+        self.input_time.setPlaceholderText("HH:MM (e.g. 07:00)")
+        self.input_time.setFixedWidth(130)
+
+        self.input_label = QLineEdit()
+        self.input_label.setPlaceholderText("Label (e.g. Bangun Pagi / Kuliah)")
+
+        btn_add = QPushButton("Simpan")
+        btn_add.clicked.connect(self.on_add_alarm)
+
+        inputs_layout.addWidget(self.input_time)
+        inputs_layout.addWidget(self.input_label)
+        inputs_layout.addWidget(btn_add)
+        ab_layout.addLayout(inputs_layout)
+        layout.addWidget(add_box)
+
+        # 4. Active Alarms List
+        lbl_list = QLabel("📋 Daftar Alarm & Timer Aktif:")
+        lbl_list.setStyleSheet("font-weight: bold; color: #94a3b8; margin-top: 6px;")
+        layout.addWidget(lbl_list)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.alarm_container = QWidget()
+        self.alarm_layout = QVBoxLayout(self.alarm_container)
+        self.alarm_layout.setContentsMargins(0, 0, 0, 0)
+        self.alarm_layout.setSpacing(8)
+        self.alarm_layout.addStretch()
+        self.scroll_area.setWidget(self.alarm_container)
+        layout.addWidget(self.scroll_area, stretch=1)
+
+        self.refresh_list()
+
+    def refresh_list(self):
+        from herta.alarm import load_alarms
+        while self.alarm_layout.count() > 1:
+            child = self.alarm_layout.takeAt(0)
+            if child is not None:
+                widget = child.widget()
+                if widget is not None:
+                    widget.deleteLater()
+
+        alarms = load_alarms()
+        if not alarms:
+            empty_lbl = QLabel("Belum ada alarm atau timer yang aktif.")
+            empty_lbl.setStyleSheet("color: #64748b; font-style: italic; padding: 12px;")
+            self.alarm_layout.insertWidget(0, empty_lbl)
+            return
+
+        for idx, a in enumerate(alarms):
+            card = QFrame()
+            card.setStyleSheet("background-color: #1e293b; border-radius: 8px; padding: 8px; border: 1px solid #334155;")
+            c_layout = QHBoxLayout(card)
+            c_layout.setContentsMargins(8, 6, 8, 6)
+
+            a_type = a.get("type", "alarm").upper()
+            t_val = a.get("time") or a.get("target_time_str")
+            lbl_type = QLabel(f"[{a_type}]")
+            lbl_type.setStyleSheet("color: #ec4899; font-weight: bold;")
+            c_layout.addWidget(lbl_type)
+
+            lbl_info = QLabel(f"<b>{t_val}</b> — {a.get('label', 'Alarm')}")
+            lbl_info.setStyleSheet("color: #f1f5f9; font-size: 13px;")
+            c_layout.addWidget(lbl_info, stretch=1)
+
+            btn_del = QPushButton("Hapus")
+            btn_del.setStyleSheet("background-color: #ef4444; padding: 4px 10px; font-size: 11px;")
+            btn_del.clicked.connect(lambda _, aid=a.get("id"): self.on_delete_alarm(aid))
+            c_layout.addWidget(btn_del)
+
+            self.alarm_layout.insertWidget(idx, card)
+
+    def on_add_alarm(self):
+        from herta.alarm import add_alarm
+        t_str = self.input_time.text().strip()
+        lbl = self.input_label.text().strip() or "Alarm Madam Herta"
+        if not t_str:
+            return
+        try:
+            add_alarm(t_str, label=lbl)
+            self.input_time.clear()
+            self.input_label.clear()
+            self.refresh_list()
+        except Exception as exc:
+            from herta.notifier import show_notification
+            show_notification("Format Salah", str(exc))
+
+    def on_add_timer(self, minutes: float):
+        from herta.alarm import add_timer
+        add_timer(minutes, label=f"Timer {minutes}m")
+        self.refresh_list()
+
+    def on_delete_alarm(self, alarm_id: str):
+        from herta.alarm import delete_alarm
+        delete_alarm(alarm_id)
+        self.refresh_list()
+
+    def on_test_alarm(self):
+        from herta.alarm import trigger_alarm
+        test_alm = {"id": "test", "time": "TEST", "label": "Test Alarm Madam Herta", "sound": "herta_morning.wav"}
+        threading.Thread(target=trigger_alarm, args=(test_alm,), daemon=True).start()
+
+
 class HertaTrayApp(QSystemTrayIcon):
+
     """System Tray controller managing the Mascot and desktop services."""
 
     def __init__(self, app: QApplication):
@@ -924,7 +1156,9 @@ class HertaTrayApp(QSystemTrayIcon):
 
         self.mascot = FloatingMascot()
         self.chat_dialog = ChatDialog()
+        self.alarm_dialog = AlarmDialog()
         self.companion_thread = CompanionWorker()
+        self.alarm_thread = AlarmWorker()
 
         self.init_menu()
         self.connect_signals()
@@ -932,6 +1166,11 @@ class HertaTrayApp(QSystemTrayIcon):
         self.show()
         self.mascot.show()
         self.companion_thread.start()
+        self.alarm_thread.start()
+
+        from herta.rvc import preload_rvc_in_background
+        preload_rvc_in_background()
+
 
     def init_menu(self):
         self.menu = QMenu()
@@ -962,6 +1201,12 @@ class HertaTrayApp(QSystemTrayIcon):
         self.act_chat.triggered.connect(self.open_chat)
         self.menu.addAction(self.act_chat)
 
+        # 3. Alarm & Timer Dialog
+        self.act_alarm = QAction("⏰ Alarms & Timers", self)
+        self.act_alarm.triggered.connect(self.open_alarm)
+        self.menu.addAction(self.act_alarm)
+
+
         # 3. Nudge
         self.act_nudge = QAction("🔮 Nudge Herta (Ask to Speak)", self)
         self.act_nudge.triggered.connect(self.trigger_nudge)
@@ -976,10 +1221,13 @@ class HertaTrayApp(QSystemTrayIcon):
 
         # 4. Romance Style Submenu
         cfg = load_config()
-        self.style_menu = self.menu.addMenu("🎭 Romance Style")
+        self.style_menu = QMenu("🎭 Romance Style", self.menu)
+        self.menu.addMenu(self.style_menu)
         self.style_group = QActionGroup(self)
-        self.act_sweet = QAction("Sweet Wife (Tsundere)", self, checkable=True)
-        self.act_yandere = QAction("Yandere (Possessive)", self, checkable=True)
+        self.act_sweet = QAction("Sweet Wife (Tsundere)", self)
+        self.act_sweet.setCheckable(True)
+        self.act_yandere = QAction("Yandere (Possessive)", self)
+        self.act_yandere.setCheckable(True)
         self.style_group.addAction(self.act_sweet)
         self.style_group.addAction(self.act_yandere)
         self.style_menu.addAction(self.act_sweet)
@@ -995,10 +1243,13 @@ class HertaTrayApp(QSystemTrayIcon):
         self.act_yandere.triggered.connect(lambda: self.set_romance_style("yandere"))
 
         # 5. Language Submenu
-        self.lang_menu = self.menu.addMenu("🌐 Subtitle Language")
+        self.lang_menu = QMenu("🌐 Subtitle Language", self.menu)
+        self.menu.addMenu(self.lang_menu)
         self.lang_group = QActionGroup(self)
-        self.act_lang_id = QAction("Bahasa Indonesia 🇮🇩", self, checkable=True)
-        self.act_lang_en = QAction("English 🇬🇧", self, checkable=True)
+        self.act_lang_id = QAction("Bahasa Indonesia 🇮🇩", self)
+        self.act_lang_id.setCheckable(True)
+        self.act_lang_en = QAction("English 🇬🇧", self)
+        self.act_lang_en.setCheckable(True)
         self.lang_group.addAction(self.act_lang_id)
         self.lang_group.addAction(self.act_lang_en)
         self.lang_menu.addAction(self.act_lang_id)
@@ -1014,7 +1265,8 @@ class HertaTrayApp(QSystemTrayIcon):
         self.act_lang_en.triggered.connect(lambda: self.set_subtitle_lang("en"))
 
         # 6. RVC Toggle
-        self.act_rvc = QAction("✨ Voice Conversion (RVC v2)", self, checkable=True)
+        self.act_rvc = QAction("✨ Voice Conversion (RVC v2)", self)
+        self.act_rvc.setCheckable(True)
         self.act_rvc.setChecked(cfg.get("rvc_enabled", True))
         self.act_rvc.triggered.connect(self.toggle_rvc)
         self.menu.addAction(self.act_rvc)
@@ -1033,6 +1285,7 @@ class HertaTrayApp(QSystemTrayIcon):
         self.mascot.poke_triggered.connect(self.on_poke_mascot)
         self.mascot.kuru_triggered.connect(self.trigger_kuru)
         self.mascot.chat_requested.connect(self.open_chat)
+        self.mascot.alarm_requested.connect(self.open_alarm)
         self.mascot.hide_requested.connect(self.hide_mascot)
         self.mascot.quit_requested.connect(self.quit_app)
         self.companion_thread.moment_triggered.connect(self.on_companion_moment)
@@ -1076,6 +1329,13 @@ class HertaTrayApp(QSystemTrayIcon):
         self.chat_dialog.raise_()
         self.chat_dialog.activateWindow()
 
+    def open_alarm(self):
+        self.alarm_dialog.refresh_list()
+        self.alarm_dialog.show()
+        self.alarm_dialog.raise_()
+        self.alarm_dialog.activateWindow()
+
+
     def trigger_nudge(self):
         cfg = load_config()
         partner = cfg.get("partner_name", "あなた")
@@ -1090,13 +1350,17 @@ class HertaTrayApp(QSystemTrayIcon):
             s_moments = [m for m in BUILTIN_MOMENTS if m.get("category") != "yandere"]
             chosen = random.choice(s_moments if s_moments else BUILTIN_MOMENTS)
 
-        jp = chosen["jp"].replace("あなた", partner)
+        jp = chosen.get("jp", "").replace("あなた", partner)
         if sub_lang == "en":
             flag = "🇬🇧"
-            sub = chosen.get("en", chosen.get("id")).replace("darling", "darling" if partner == "あなた" else partner)
+            sub_raw = chosen.get("en") or chosen.get("id") or ""
+            sub = sub_raw.replace("darling", "darling" if partner == "あなた" else partner)
         else:
             flag = "🇮🇩"
-            sub = chosen.get("id", chosen.get("en")).replace("sayang", "sayang" if partner == "あなた" else partner)
+            sub_raw = chosen.get("id") or chosen.get("en") or ""
+            sub = sub_raw.replace("sayang", "sayang" if partner == "あなた" else partner)
+
+
 
         self.on_companion_moment(jp, sub, flag)
 

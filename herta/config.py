@@ -34,16 +34,28 @@ DEFAULT_CONFIG = {
     "partner_name": "あなた",
     "gemini_api_key": "",
     "rvc_enabled": True,
-    "rvc_model_path": "/mnt/games/rvc_models/model.pth" if not IS_WINDOWS else os.path.join(CONFIG_DIR, "models", "model.pth"),
-    "rvc_index_path": "/mnt/games/rvc_models/model.index" if not IS_WINDOWS else os.path.join(CONFIG_DIR, "models", "model.index"),
+    "rvc_model_path": (
+        "D:\\rvc_models\\model.pth" if IS_WINDOWS and os.path.exists("D:\\rvc_models\\model.pth")
+        else "/mnt/games/rvc_models/model.pth" if not IS_WINDOWS and os.path.exists("/mnt/games/rvc_models/model.pth")
+        else os.path.join(CONFIG_DIR, "models", "model.pth")
+    ),
+    "rvc_index_path": (
+        "D:\\rvc_models\\model.index" if IS_WINDOWS and os.path.exists("D:\\rvc_models\\model.index")
+        else "/mnt/games/rvc_models/model.index" if not IS_WINDOWS and os.path.exists("/mnt/games/rvc_models/model.index")
+        else os.path.join(CONFIG_DIR, "models", "model.index")
+    ),
     "tts_voice": "ja-JP-NanamiNeural",
+
     "gemini_chat_model": "gemini-3.1-flash-lite",
     "gemini_tts_model": "gemini-2.5-flash-preview-tts",
     "romance_mode": True,
     "romance_address_style": "sweet_wife",
     "subtitle_language": "id",
     "companion_min_minutes": 20,
-    "companion_max_minutes": 45
+    "companion_max_minutes": 45,
+    "telegram_bot_token": "",
+    "telegram_chat_id": "",
+    "rvc_index_influence": 0.3
 }
 
 
