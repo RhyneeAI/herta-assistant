@@ -16,8 +16,9 @@ import urllib.error
 import urllib.request
 
 from herta.audio import play_audio
-from herta.config import AUDIO_DIR, TMP_DIR, load_config
+from herta.config import AUDIO_DIR, CACHE_DIR, IS_WINDOWS, TMP_DIR, load_config
 from herta.notifier import show_notification
+from herta.reminders import get_due_reminder_moment
 from herta.rvc import convert_voice
 from herta.tts import synthesize_speech
 
@@ -226,11 +227,12 @@ def generate_dynamic_moment(partner_name: str, api_key: str, chat_model: str = "
     return None
 
 
-def trigger_spontaneous_interaction(force_dynamic: bool = False):
+def trigger_spontaneous_interaction(force_dynamic: bool = False, force_reminder: bool = False):
     """Trigger a single spontaneous companion interaction.
     
     By default, uses 100% pre-rendered offline audio files to eliminate
     Gemini API requests and protect against rate limit exhaustion (HTTP 429).
+    Also supports priority task reminders.
     """
     cfg = load_config()
     partner = cfg.get("partner_name", "あなた")
@@ -240,8 +242,20 @@ def trigger_spontaneous_interaction(force_dynamic: bool = False):
     romance_style = cfg.get("romance_address_style", "sweet_wife")
     sub_lang = cfg.get("subtitle_language", "id")
 
+    if is_system_sleeping() and not force_dynamic:
+        sys.stderr.write("System is currently sleeping. Suppressing spontaneous interaction.\n")
+        return
+
+    reminder_moment = get_due_reminder_moment(partner, subtitle_lang=sub_lang)
+    is_reminder = (force_reminder or (reminder_moment and random.random() < 0.4)) and reminder_moment is not None
+
     moment = None
-    if force_dynamic and api_key:
+    if is_reminder:
+        jp_text = reminder_moment["jp"]
+        sub_text = reminder_moment["sub"]
+        flag = reminder_moment["flag"]
+        audio_file = None
+    elif force_dynamic and api_key:
         moment = generate_dynamic_moment(
             partner_name=partner,
             api_key=api_key,
@@ -249,13 +263,13 @@ def trigger_spontaneous_interaction(force_dynamic: bool = False):
             romance_style=romance_style,
             subtitle_lang=sub_lang
         )
+        if moment:
+            jp_text = moment["jp"]
+            sub_text = moment["sub"]
+            flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
+            audio_file = None
 
-    if moment:
-        jp_text = moment["jp"]
-        sub_text = moment["sub"]
-        flag = "🇬🇧" if sub_lang == "en" else "🇮🇩"
-        audio_file = None
-    else:
+    if not is_reminder and not moment:
         if romance_style == "yandere":
             yandere_moments = [m for m in BUILTIN_MOMENTS if m.get("category") == "yandere"]
             if yandere_moments:
@@ -301,22 +315,116 @@ def trigger_spontaneous_interaction(force_dynamic: bool = False):
     play_audio(final_audio, timeout=15)
 
 
+def is_system_sleeping() -> bool:
+    """Check if the system is currently in sleep or suspend state."""
+    state_file = os.path.join(CACHE_DIR, "power_state.json")
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return bool(data.get("is_sleeping", False))
+        except Exception:
+            pass
+    return False
+
+
+def is_user_active(max_idle_seconds: int = 300) -> bool:
+    """
+    Check if the user is actively present at their computer.
+    Returns False if screen is locked or user has been idle for more than max_idle_seconds.
+    Prevents spontaneous companion nudges and audio while user is away, asleep, or screen is off.
+    """
+    if IS_WINDOWS:
+        try:
+            import ctypes
+            class LASTINPUTINFO(ctypes.Structure):
+                _fields_ = [("cbSize", ctypes.c_uint), ("dwTime", ctypes.c_uint)]
+            lii = LASTINPUTINFO()
+            lii.cbSize = ctypes.sizeof(LASTINPUTINFO)
+            if ctypes.windll.user32.GetLastInputInfo(ctypes.byref(lii)):
+                millis = ctypes.windll.kernel32.GetTickCount() - lii.dwTime
+                if millis / 1000.0 > max_idle_seconds:
+                    return False
+        except Exception:
+            pass
+        return True
+
+    # Linux check via GNOME DBus
+    try:
+        import subprocess
+        # 1. ScreenSaver lock check
+        cmd_lock = [
+            "gdbus", "call", "--session",
+            "--dest", "org.gnome.ScreenSaver",
+            "--object-path", "/org/gnome/ScreenSaver",
+            "--method", "org.gnome.ScreenSaver.GetActive"
+        ]
+        res_lock = subprocess.run(cmd_lock, capture_output=True, text=True, timeout=2)
+        if "(true,)" in res_lock.stdout.lower():
+            return False
+
+        # 2. Idle time check via Mutter IdleMonitor (milliseconds)
+        cmd_idle = [
+            "gdbus", "call", "--session",
+            "--dest", "org.gnome.Mutter.IdleMonitor",
+            "--object-path", "/org/gnome/Mutter/IdleMonitor/Core",
+            "--method", "org.gnome.Mutter.IdleMonitor.GetIdletime"
+        ]
+        res_idle = subprocess.run(cmd_idle, capture_output=True, text=True, timeout=2)
+        if res_idle.returncode == 0 and "uint64" in res_idle.stdout:
+            parts = res_idle.stdout.strip().split()
+            for p in parts:
+                cleaned = p.rstrip(",)")
+                if cleaned.isdigit():
+                    idle_ms = int(cleaned)
+                    if idle_ms > (max_idle_seconds * 1000):
+                        return False
+                    break
+    except Exception:
+        pass
+
+    return True
+
+
 def run_companion_loop(min_interval_minutes: int = 20, max_interval_minutes: int = 45):
     """
     Run continuous background companion loop.
-    Periodically checks in on the user with randomized natural intervals.
+    Periodically checks in on the user with randomized natural intervals,
+    strictly respecting sleep mode, screen lock, and user presence.
     """
     print(f"💎 Madam Herta Companion Mode ACTIVE.")
     print(f"Spontaneous check-in default range: {min_interval_minutes} to {max_interval_minutes} minutes.")
 
     while True:
         cfg = load_config()
+        if not cfg.get("companion_enabled", True):
+            time.sleep(60)
+            continue
+
         min_m = int(cfg.get("companion_min_minutes", min_interval_minutes))
         max_m = int(cfg.get("companion_max_minutes", max_interval_minutes))
         if min_m > max_m:
             min_m, max_m = max_m, min_m
         wait_seconds = random.randint(max(1, min_m) * 60, max(1, max_m) * 60)
-        time.sleep(wait_seconds)
+
+        # Sleep in small slices to be responsive to system sleep / wake transitions
+        elapsed_wait = 0
+        while elapsed_wait < wait_seconds:
+            time.sleep(5)
+            if is_system_sleeping():
+                # Pause progress while system is asleep
+                continue
+            elapsed_wait += 5
+
+        # Pre-checks before executing interaction:
+        if is_system_sleeping():
+            continue
+
+        if not is_user_active(max_idle_seconds=300):
+            sys.stderr.write("User is inactive / screen locked. Postponing companion nudge.\n")
+            time.sleep(120)
+            continue
+
         try:
             trigger_spontaneous_interaction()
         except Exception as exc:

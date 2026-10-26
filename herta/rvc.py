@@ -1,7 +1,8 @@
 """
 RVC v2 (Retrieval-based Voice Conversion) inference module.
 Converts base TTS audio into authentic Yamazaki Haruka (山崎はるか / Herta) voice.
-Enhanced with PyTorch multi-threading, dynamic index weighting, phrase caching,
+Accelerated by AMD Radeon 680M (ROCm) with automatic CPU fallback,
+PyTorch multi-threading, dynamic index weighting, phrase caching,
 and background model pre-warming.
 """
 
@@ -15,6 +16,10 @@ import warnings
 # Suppress PyTorch internal deprecation notices
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
+
+# Set AMD RDNA 2 architecture target for Radeon 680M (gfx1035 -> gfx1030 compatibility)
+if "HSA_OVERRIDE_GFX_VERSION" not in os.environ:
+    os.environ["HSA_OVERRIDE_GFX_VERSION"] = "10.3.0"
 
 from herta.config import CACHE_DIR, TMP_DIR, load_config
 
@@ -59,20 +64,42 @@ def get_rvc_loader():
         optimize_torch_cpu_threads()
 
         try:
+            import torch
             from infer_rvc_python import BaseLoader
-            loader = BaseLoader(only_cpu=True)
-            # Use index only if influence > 0 and file exists
+
             use_index = index_path if (index_influence > 0 and os.path.exists(index_path)) else ""
-            loader.apply_conf(
-                tag="herta",
-                file_model=model_path,
-                file_index=use_index,
-                pitch_algo="pm",
-                pitch_lvl=0,
-                index_influence=index_influence,
-            )
-            _loader_instance = loader
-            return _loader_instance
+            has_gpu = torch.cuda.is_available()
+            gpu_name = torch.cuda.get_device_name(0) if has_gpu else "CPU"
+
+            try:
+                loader = BaseLoader(only_cpu=not has_gpu)
+                loader.apply_conf(
+                    tag="herta",
+                    file_model=model_path,
+                    file_index=use_index,
+                    pitch_algo="pm",
+                    pitch_lvl=0,
+                    index_influence=index_influence,
+                )
+                _loader_instance = loader
+                if has_gpu:
+                    sys.stdout.write(f"🚀 Madam Herta RVC accelerated on GPU: {gpu_name}\n")
+                return _loader_instance
+            except Exception as gpu_err:
+                if has_gpu:
+                    sys.stderr.write(f"GPU loader failed ({gpu_err}), falling back to CPU...\n")
+                    loader = BaseLoader(only_cpu=True)
+                    loader.apply_conf(
+                        tag="herta",
+                        file_model=model_path,
+                        file_index=use_index,
+                        pitch_algo="pm",
+                        pitch_lvl=0,
+                        index_influence=index_influence,
+                    )
+                    _loader_instance = loader
+                    return _loader_instance
+                raise gpu_err
         except Exception as exc:
             sys.stderr.write(f"RVC loader initialization error: {exc}\n")
             _loader_failed = True

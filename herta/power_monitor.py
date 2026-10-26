@@ -5,12 +5,14 @@ Includes a 15-minute cooldown between triggers to prevent notification/audio spa
 and avoid failed suspend states that cause laptop overheating.
 """
 
+import atexit
 import json
 import os
 import subprocess
 import sys
 import threading
 import time
+from typing import Optional
 
 from herta.alarm import run_alarm_scheduler_loop
 from herta.audio import play_audio
@@ -26,20 +28,88 @@ STATE_FILE = os.path.join(CACHE_DIR, "power_state.json")
 COOLDOWN_SECONDS = 900
 
 
-def get_last_event_time(event_type: str) -> float:
-    """Retrieve timestamp of last recorded sleep/wake event."""
+class LinuxSleepInhibitor:
+    """
+    Manages a systemd delay inhibitor lock on Linux to pause system suspend
+    until Madam Herta's bedtime voiceline and audio buffer drain are finished.
+    Uses 'systemd-inhibit --mode=delay cat' which holds the delay lock until
+    stdin is closed or the process is terminated.
+    """
+
+    def __init__(self):
+        self._proc: Optional[subprocess.Popen] = None
+        self._lock = threading.Lock()
+
+    def acquire(self) -> bool:
+        """Acquire or ensure the delay inhibitor lock is held."""
+        with self._lock:
+            if self._proc is not None and self._proc.poll() is None:
+                return True
+            try:
+                cmd = [
+                    "systemd-inhibit",
+                    "--what=sleep",
+                    "--who=Madam Herta Assistant",
+                    "--why=Bedtime voiceline before suspend",
+                    "--mode=delay",
+                    "cat"
+                ]
+                self._proc = subprocess.Popen(
+                    cmd,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                return True
+            except Exception as exc:
+                sys.stderr.write(f"Failed to acquire sleep delay inhibitor: {exc}\n")
+                self._proc = None
+                return False
+
+    def release(self):
+        """Release the delay inhibitor lock, allowing systemd to proceed with suspend."""
+        with self._lock:
+            if self._proc is None:
+                return
+            try:
+                if self._proc.stdin:
+                    self._proc.stdin.close()
+                self._proc.wait(timeout=1.0)
+            except Exception:
+                try:
+                    self._proc.terminate()
+                    self._proc.wait(timeout=1.0)
+                except Exception:
+                    pass
+            finally:
+                self._proc = None
+
+
+def get_kernel_suspend_success_count() -> int:
+    """Retrieve kernel suspend success count from sysfs (Linux only)."""
+    if not IS_WINDOWS and os.path.exists("/sys/power/suspend_stats/success"):
+        try:
+            with open("/sys/power/suspend_stats/success", "r") as f:
+                return int(f.read().strip())
+        except Exception:
+            pass
+    return -1
+
+
+def get_event_state(key: str, default=0.0):
+    """Retrieve arbitrary event state value."""
     if os.path.exists(STATE_FILE):
         try:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return float(data.get(event_type, 0))
+                return data.get(key, default)
         except Exception:
             pass
-    return 0.0
+    return default
 
 
-def save_event_time(event_type: str, timestamp: float):
-    """Persist event timestamp to disk."""
+def set_event_state(key: str, value):
+    """Persist event state value to disk."""
     data = {}
     if os.path.exists(STATE_FILE):
         try:
@@ -47,7 +117,7 @@ def save_event_time(event_type: str, timestamp: float):
                 data = json.load(f)
         except Exception:
             data = {}
-    data[event_type] = timestamp
+    data[key] = value
     try:
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f)
@@ -55,52 +125,95 @@ def save_event_time(event_type: str, timestamp: float):
         pass
 
 
-def on_sleep() -> bool:
+def get_last_event_time(event_type: str) -> float:
+    """Retrieve timestamp of last recorded sleep/wake event."""
+    return float(get_event_state(event_type, 0.0))
+
+
+def save_event_time(event_type: str, timestamp: float):
+    """Persist event timestamp to disk."""
+    set_event_state(event_type, timestamp)
+
+
+def on_sleep(inhibitor: Optional[LinuxSleepInhibitor] = None) -> bool:
     """
     Triggered right before the machine enters sleep / suspend.
     Enforces a strict 15-minute cooldown to prevent notification spam and suspend aborts.
+    Holds systemd delay inhibitor until audio playback finishes so kernel suspend
+    does not interrupt the bedtime voiceline mid-sentence.
     Returns True if voiceline was played, False if skipped.
     """
-    now = time.time()
-    last_sleep = get_last_event_time("last_sleep")
-    elapsed = now - last_sleep
+    try:
+        now = time.time()
+        last_sleep = get_last_event_time("last_sleep")
+        elapsed = now - last_sleep
 
-    if elapsed < COOLDOWN_SECONDS:
-        sys.stderr.write(
-            f"Sleep detected within cooldown ({int(elapsed)}s < {COOLDOWN_SECONDS}s). Skipping to protect hardware.\n"
-        )
-        return False
+        if elapsed < COOLDOWN_SECONDS:
+            sys.stderr.write(
+                f"Sleep detected within cooldown ({int(elapsed)}s < {COOLDOWN_SECONDS}s). Skipping to protect hardware.\n"
+            )
+            return False
 
-    save_event_time("last_sleep", now)
+        # Record kernel suspend success count before entering sleep to detect aborts later
+        success_before = get_kernel_suspend_success_count()
+        set_event_state("suspend_success_before", success_before)
+        set_event_state("is_sleeping", True)
+        save_event_time("last_sleep", now)
 
-    # Note: We strictly avoid desktop notifications (notify-send) right before sleep,
-    # because notification popups in desktop environments (like GNOME) wake up the
-    # display server and cause systemd to abort sleep back to standby!
-    if os.path.exists(SLEEP_AUDIO):
-        try:
-            play_audio(SLEEP_AUDIO, timeout=8)
-        except Exception:
-            pass
-        # Brief 0.5s pause allowing PipeWire/ALSA to release hardware codec before kernel suspend
-        time.sleep(0.5)
+        # Note: We strictly avoid desktop notifications (notify-send) right before sleep,
+        # because notification popups in desktop environments (like GNOME) wake up the
+        # display server and cause systemd to abort sleep back to standby!
+        if os.path.exists(SLEEP_AUDIO):
+            try:
+                play_audio(SLEEP_AUDIO, timeout=8)
+            except Exception:
+                pass
+            # Brief 0.5s pause allowing PipeWire/ALSA to release hardware codec before kernel suspend
+            time.sleep(0.5)
 
-    return True
+        return True
+    finally:
+        # Crucial: Always release the delay inhibitor lock so systemd can proceed to suspend
+        if inhibitor is not None:
+            inhibitor.release()
 
 
-def on_wake() -> bool:
+def on_wake(inhibitor: Optional[LinuxSleepInhibitor] = None) -> bool:
     """
     Triggered right after the machine resumes from sleep.
-    Enforces cooldown and minimum sleep duration check.
+    Re-arms delay inhibitor lock, verifies kernel-level suspend success, and plays wake voiceline.
     """
+    # Re-arm the delay inhibitor immediately so subsequent sleep requests are held
+    if inhibitor is not None:
+        inhibitor.acquire()
+
     now = time.time()
     last_wake = get_last_event_time("last_wake")
     last_sleep = get_last_event_time("last_sleep")
 
-    # If the system "woke up" in less than 8 seconds, it was an aborted suspend / glitch
-    if (now - last_sleep) < 8:
-        sys.stderr.write("Premature resume detected (< 8s from sleep request). Skipping wake greeting.\n")
+    # Clear sleep transition flag
+    set_event_state("is_sleeping", False)
+
+    # 1. Linux sysfs verification: did the kernel ACTUALLY complete suspend?
+    if not IS_WINDOWS:
+        success_before = int(get_event_state("suspend_success_before", -1))
+        current_success = get_kernel_suspend_success_count()
+        if success_before >= 0 and current_success >= 0:
+            if current_success <= success_before:
+                sys.stderr.write(
+                    f"Aborted or failed suspend detected (kernel suspend success count unchanged: {current_success} <= {success_before}). "
+                    "Skipping wake greeting to avoid loop.\n"
+                )
+                return False
+
+    # 2. Check if the system resumed too quickly (< 15 seconds)
+    if (now - last_sleep) < 15:
+        sys.stderr.write(
+            f"Premature resume detected ({int(now - last_sleep)}s < 15s from sleep request). Skipping wake greeting.\n"
+        )
         return False
 
+    # 3. Enforce 15-minute cooldown between wake greetings
     elapsed = now - last_wake
     if elapsed < COOLDOWN_SECONDS:
         sys.stderr.write(
@@ -108,6 +221,7 @@ def on_wake() -> bool:
         )
         return False
 
+    # Immediately persist wake timestamp BEFORE time.sleep to prevent concurrent triggers
     save_event_time("last_wake", now)
 
     time.sleep(2)  # Wait for display and audio subsystem to settle
@@ -130,6 +244,10 @@ def on_wake() -> bool:
 
 def run_linux_monitor():
     """Linux power monitor using systemd-logind DBus interface with delay inhibitor."""
+    inhibitor = LinuxSleepInhibitor()
+    inhibitor.acquire()
+    atexit.register(inhibitor.release)
+
     cmd = [
         "gdbus", "monitor", "--system",
         "--dest", "org.freedesktop.login1",
@@ -140,6 +258,7 @@ def run_linux_monitor():
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
     except Exception as exc:
         sys.stderr.write(f"Failed to start gdbus monitor: {exc}\n")
+        inhibitor.release()
         return
 
     if proc.stdout is None:
@@ -148,12 +267,13 @@ def run_linux_monitor():
     try:
         for line in proc.stdout:
             if "PrepareForSleep (true," in line:
-                on_sleep()
+                on_sleep(inhibitor=inhibitor)
             elif "PrepareForSleep (false," in line:
-                on_wake()
+                on_wake(inhibitor=inhibitor)
     finally:
         if proc:
             proc.terminate()
+        inhibitor.release()
 
 
 
@@ -222,12 +342,13 @@ def run_monitor():
     min_m = int(cfg.get("companion_min_minutes", 20))
     max_m = int(cfg.get("companion_max_minutes", 45))
 
-    companion_thread = threading.Thread(
-        target=run_companion_loop,
-        kwargs={"min_interval_minutes": min_m, "max_interval_minutes": max_m},
-        daemon=True
-    )
-    companion_thread.start()
+    if cfg.get("companion_enabled", True):
+        companion_thread = threading.Thread(
+            target=run_companion_loop,
+            kwargs={"min_interval_minutes": min_m, "max_interval_minutes": max_m},
+            daemon=True
+        )
+        companion_thread.start()
 
     alarm_thread = threading.Thread(
         target=run_alarm_scheduler_loop,

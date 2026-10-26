@@ -16,8 +16,10 @@ Features 100% authentic Japanese spoken voice using **Yamazaki Haruka (山崎は
   Interactive desktop companion combining a frameless, transparent, draggable anime mascot (with animated Kuru Kuru spinning GIF, mini action toolbar, and live subtitle speech bubbles) and an unobtrusive system tray applet with quick controls. Includes an interactive `🌀 Kuru Kuru!` button, voice replays (`🔊`), and quick suggestion chips.
 * **Subtitles in Indonesian & English**:
   Every response displays the Japanese line alongside an Indonesian (`id`) or English (`en`) translation subtitle.
-* **Proactive Companion & Wife Mode (Sweet Wife & Yandere)**:
-  Periodically and spontaneously checks in on you (customizable, default: every 20–45 minutes). Switchable between **Sweet Wife** (doting tsundere) and **Yandere** (sweetly possessive and obsessive).
+* **Proactive Companion & Presence-Aware Wife Mode (Sweet Wife & Yandere)**:
+  Periodically and spontaneously checks in on you (customizable, default: every 20–45 minutes). Switchable between **Sweet Wife** (doting tsundere) and **Yandere** (sweetly possessive and obsessive). Includes **Smart Presence & Sleep Protection**: automatically pauses while the machine is sleeping, when the screen is locked, or if you are idle (>5 minutes), ensuring your laptop never wakes up during sleep.
+* **Task-Aware Reminders & Priorities (`herta remind`)**:
+  Madam Herta watches over your critical deadlines, to-dos, and postponed tasks. She weaves active reminders into her morning boot greeting banners, companion nudges (with customized Japanese voice lines), and live voice chat dialogues.
 * **Boot & Login Greeting**:
   Plays time-contextual voicelines (morning, afternoon, evening) with native desktop notifications when your computer starts or logs in.
 * **Sleep & Wake Monitor**:
@@ -144,6 +146,7 @@ herta gui
 | `herta service off` | *None* | Stop and disable background service. |
 | `herta service restart` | *None* | Restart background service to reload changes. |
 | `herta service status` | *None* | Check whether background service is currently running. |
+| `herta remind` | `[--add <title>]`<br>`[--due <date>]`<br>`[--reason <text>]`<br>`[--done <query>]` | View, add, or dismiss active priority reminders and deadlines. |
 | `herta config` | *See below* | View or update configuration values directly via CLI. |
 
 ### CLI Configuration Flags (`herta config`)
@@ -160,11 +163,76 @@ herta config [OPTIONS]
 | `--romance` | `on` \| `off` | `on` | Enable or disable affectionate anime wife mode (intimate Japanese inflections). |
 | `--style` | `sweet_wife` \| `yandere` | `sweet_wife` | Choose romance persona style: `sweet_wife` (affectionate tsundere) or `yandere` (obsessive & possessive). |
 | `--lang` | `id` \| `en` | `id` | Choose subtitle translation language: `id` (Indonesian, default) or `en` (English). |
+| `--companion` | `on` \| `off` | `on` | Enable or disable proactive background companion check-ins. |
 | `--companion-min` | `integer` | `20` | Minimum wait interval (in minutes) for spontaneous companion check-ins. |
 | `--companion-max` | `integer` | `45` | Maximum wait interval (in minutes) for spontaneous companion check-ins. |
 | `--telegram-token` | `string` | `""` | Optional Telegram Bot Token to forward alarm alerts directly to your phone. |
 | `--telegram-chat-id` | `string` | `""` | Optional Telegram Chat ID to receive phone alarm alerts. |
 
+
+---
+
+### 📌 Task & Priority Reminders (`herta remind`)
+
+Madam Herta can track urgent deadlines, postponed tasks, or routines you forgot to do. She ensures you never miss critical targets by reminding you across three distinct channels:
+
+1. **Boot / Login Greeting**: Highlights pending reminders right on your desktop notification banner when your computer starts.
+2. **Proactive Companion Nudges**: Spontaneously speaks up during work sessions in authentic Yamazaki Haruka Japanese voice lines paired with translated subtitles.
+3. **Live Voice Chat**: Automatically injected into Madam Herta's conversational working memory, allowing her to tease, care for, and remind you naturally during conversations.
+
+#### Managing Reminders via CLI
+
+* **View Active Reminders**:
+  ```bash
+  herta remind
+  ```
+
+* **Add a Reminder Manually**:
+  ```bash
+  herta remind --add "Report KPI bulanan Madtive" --due 2026-10-26 --reason "Lupa kemarin hari Minggu"
+  ```
+  * `--add <title>`: Task title or description.
+  * `--due <YYYY-MM-DD>`: Due date (defaults to today if omitted).
+  * `--reason <text>`: Optional context (e.g. why it was rescheduled or why it's urgent).
+
+* **Complete & Dismiss a Reminder**:
+  ```bash
+  herta remind --done "KPI"
+  ```
+  Matches against the title or ID and clears it once you have finished the task.
+
+* **Configuration Storage**:
+  Active reminders are saved in JSON format:
+  * Linux: `~/.config/herta/reminders.json`
+  * Windows: `%APPDATA%\HertaAssistant\reminders.json`
+
+---
+
+### 💖 Presence-Aware Companion Mode & Sleep Protection
+
+Madam Herta's background monitoring engine is engineered for rock-solid stability, ensuring **zero sleep disturbances**, **no audio cutoffs mid-sentence**, and **no accidental wakeups**:
+
+* **Systemd Delay Inhibitor Lock (`systemd-inhibit --mode=delay`)**:
+  * **The Problem**: When closing the laptop lid or selecting suspend, `systemd-logind` normally dispatches kernel suspend (`s2idle`) within 50–100ms. If Madam Herta's bedtime voiceline (~4.5s) is cut off mid-playback, frozen ALSA/PipeWire DMA audio buffers or codec interrupts immediately wake the machine back up, causing Herta to resume speaking after waking.
+  * **The Solution**: Madam Herta maintains a native `systemd-inhibit` delay lock (`--what=sleep --who="Madam Herta Assistant" --mode=delay`). When sleep is initiated, `systemd-logind` pauses suspend and waits. Madam Herta plays 100% of her bedtime speech, waits 0.5 seconds for the audio subsystem to flush and release the hardware codec, and then cleanly releases the inhibitor lock. The kernel then enters suspend in complete silence.
+  * **Auto-Re-Arming**: When the machine wakes up (`PrepareForSleep(false)`), the delay lock is immediately re-acquired for subsequent sleep cycles.
+* **15-Minute Cooldown Protection**:
+  * Both sleep and wake events enforce a strict 15-minute cooldown. If you sleep or wake your laptop multiple times within 15 minutes, audio playback is safely bypassed, while the inhibitor lock is released instantly so your laptop suspends with zero lag.
+* **Modern Standby (`s2idle`) Companion Freeze**:
+  * While the machine is sleeping or transitioning into suspend, the spontaneous companion loop automatically **freezes completely**. No audio streams or desktop notification popups are ever dispatched while the system is asleep.
+* **Kernel Verification (`/sys/power/suspend_stats/success`)**:
+  * On Linux, resume voicelines verify kernel-level suspend success counters. If an aborted suspend occurs (e.g., due to busy disk processes), wake greetings are safely suppressed to prevent loop cycles.
+* **User Presence & Idle Detection**:
+  * Before delivering any spontaneous dialogue, Madam Herta checks the desktop session:
+    * **Screen Locked**: If the display is locked (`org.gnome.ScreenSaver`), check-ins are skipped.
+    * **User Inactive / Away**: If mouse and keyboard have been idle for more than 5 minutes (`org.gnome.Mutter.IdleMonitor`), check-ins are postponed.
+    * She **only** speaks when you are actively seated and working at your computer.
+* **Enabling / Disabling via CLI**:
+  You can toggle companion check-ins on or off anytime:
+  ```bash
+  herta config --companion off   # Turn off spontaneous check-ins (boot & sleep voicelines stay active)
+  herta config --companion on    # Re-enable companion check-ins
+  ```
 
 ---
 
@@ -189,6 +257,7 @@ Configuration settings are stored in JSON format and loaded automatically at sta
   "romance_mode": true,
   "romance_address_style": "sweet_wife",
   "subtitle_language": "id",
+  "companion_enabled": true,
   "companion_min_minutes": 20,
   "companion_max_minutes": 45
 }
@@ -209,6 +278,7 @@ Configuration settings are stored in JSON format and loaded automatically at sta
 | `romance_mode` | `boolean` | `true` | When `true`, engages Madam Herta's intimate anime wife persona. Prompts inject affectionate phrasing, playful tsundere teasing, loving pauses (`...`, `〜`), and sweet Japanese particles (`よ`, `ね`, `わ`). |
 | `romance_address_style` | `string` | `"sweet_wife"` | Preset addressing style for the romance engine. Options: `"sweet_wife"` (loving, doting, tsundere anime wife) or `"yandere"` (obsessively loving, sweetly possessive, clingy, subtle chilling possessiveness). |
 | `subtitle_language` | `string` | `"id"` | Subtitle translation language displayed in terminal and desktop notification banners. Options: `"id"` (Indonesian, default) or `"en"` (English). Spoken voice always remains 100% Japanese. |
+| `companion_enabled` | `boolean` | `true` | Toggle proactive background companion nudges on or off without affecting startup greetings or sleep monitoring. |
 | `companion_min_minutes` | `integer` | `20` | Lower bound of the randomized spontaneous companion timer in minutes. Prevents check-ins from firing too frequently. |
 | `companion_max_minutes` | `integer` | `45` | Upper bound of the randomized spontaneous companion timer in minutes. Ensures Herta spontaneously checks in before you stay idle or overworked for too long. |
 
@@ -245,6 +315,7 @@ herta-assistant/
 │   ├── gui.py              # Desktop Mascot & System Tray GUI (PyQt6)
 │   ├── notifier.py         # Cross-platform desktop toast notification banners
 │   ├── power_monitor.py    # Sleep and wake listener (DBus / Win32)
+│   ├── reminders.py        # Task-aware priority reminder manager & prompt context
 │   ├── rvc.py              # RVC v2 Yamazaki Haruka inference wrapper
 │   ├── service.py          # Background service controller
 │   └── tts.py              # Japanese TTS generator (Edge-TTS & Gemini)
@@ -264,7 +335,9 @@ herta-assistant/
 
 * **Linux**:
   * Config: `~/.config/herta/config.json`
+  * Reminders: `~/.config/herta/reminders.json`
   * Cache & Models: `~/.config/herta/models/`
 * **Windows**:
   * Config: `%APPDATA%\HertaAssistant\config.json`
+  * Reminders: `%APPDATA%\HertaAssistant\reminders.json`
   * Cache & Models: `%APPDATA%\HertaAssistant\models\`

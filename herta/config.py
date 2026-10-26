@@ -51,6 +51,7 @@ DEFAULT_CONFIG = {
     "romance_mode": True,
     "romance_address_style": "sweet_wife",
     "subtitle_language": "id",
+    "companion_enabled": True,
     "companion_min_minutes": 20,
     "companion_max_minutes": 45,
     "telegram_bot_token": "",

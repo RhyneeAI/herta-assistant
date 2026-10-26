@@ -11,6 +11,7 @@ import os
 from herta.audio import play_audio
 from herta.config import AUDIO_DIR, load_config
 from herta.notifier import show_notification
+from herta.reminders import get_active_reminders
 
 
 def get_time_slot_key() -> str:
@@ -52,6 +53,15 @@ def trigger_greeting():
                         flag = "🇮🇩"
         except Exception:
             pass
+
+    # Append active priority reminder if due today
+    active_rems = get_active_reminders()
+    if active_rems:
+        top_rem = active_rems[0].get("title", "")
+        if sub_lang == "en":
+            sub_text += f"\n📌 Priority Reminder: {top_rem}"
+        else:
+            sub_text += f"\n📌 Pengingat Prioritas: {top_rem}"
 
     # Display notification banner with subtitles and Herta icon
     show_notification(f"Madam Herta: {jp_text}", f"{flag} {sub_text}")

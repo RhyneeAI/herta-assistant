@@ -23,6 +23,7 @@ from herta.companion import run_companion_loop, trigger_spontaneous_interaction
 from herta.config import CONFIG_FILE, load_config, save_config
 from herta.greeting import trigger_greeting
 from herta.power_monitor import on_sleep, on_wake, run_monitor
+from herta.reminders import add_reminder, complete_reminder, load_reminders
 from herta.service import restart_service, show_service_status, start_service, stop_service
 
 
@@ -90,6 +91,13 @@ def main():
     # alarm test
     alarm_sub.add_parser("test", help="Test Madam Herta wake-up alarm sound and pop-up immediately")
 
+    # Reminders command
+    remind_parser = subparsers.add_parser("remind", help="List or manage active reminders")
+    remind_parser.add_argument("--add", type=str, help="Add a new reminder title")
+    remind_parser.add_argument("--due", type=str, help="Due date (YYYY-MM-DD)")
+    remind_parser.add_argument("--reason", type=str, help="Context or reason for reminder")
+    remind_parser.add_argument("--done", type=str, help="Complete and remove reminder by title or ID")
+
     # Configuration command
     config_parser = subparsers.add_parser("config", help="View or modify configuration")
     config_parser.add_argument("--name", type=str, help="Set partner name")
@@ -98,6 +106,7 @@ def main():
     config_parser.add_argument("--romance", choices=["on", "off"], help="Enable or disable romance mode (intimate wife tone)")
     config_parser.add_argument("--style", choices=["sweet_wife", "yandere"], help="Set romance address style: sweet_wife or yandere")
     config_parser.add_argument("--lang", choices=["id", "en"], help="Set subtitle translation language: id (Indonesian) or en (English)")
+    config_parser.add_argument("--companion", choices=["on", "off"], help="Enable or disable proactive companion check-ins")
     config_parser.add_argument("--companion-min", type=int, help="Minimum companion interval in minutes")
     config_parser.add_argument("--companion-max", type=int, help="Maximum companion interval in minutes")
     config_parser.add_argument("--telegram-token", type=str, help="Telegram Bot Token for phone notifications")
@@ -182,6 +191,26 @@ def main():
             print("=" * 60 + "\n")
     elif args.command == "nudge":
         trigger_spontaneous_interaction()
+    elif args.command == "remind":
+        if args.add:
+            item = add_reminder(args.add, due=args.due or "", reason=args.reason or "")
+            print(f"✅ Added reminder: {item['title']} (Due: {item['due']})")
+        elif args.done:
+            if complete_reminder(args.done):
+                print(f"✅ Completed reminder: {args.done}")
+            else:
+                print(f"❌ Reminder matching '{args.done}' not found.")
+        else:
+            rems = load_reminders()
+            if not rems:
+                print("No active reminders for Madam Herta.")
+            else:
+                print(f"\n📌 Madam Herta Active Reminders ({len(rems)}):")
+                for idx, r in enumerate(rems, 1):
+                    due = r.get("due", "Anytime")
+                    reason = f" - {r.get('reason')}" if r.get("reason") else ""
+                    print(f"  {idx}. [{due}] {r.get('title')}{reason}")
+                print()
     elif args.command == "config":
         cfg = load_config()
         changed = False
@@ -202,6 +231,9 @@ def main():
             changed = True
         if args.lang:
             cfg["subtitle_language"] = args.lang
+            changed = True
+        if args.companion:
+            cfg["companion_enabled"] = (args.companion == "on")
             changed = True
         if args.companion_min is not None:
             cfg["companion_min_minutes"] = max(1, args.companion_min)

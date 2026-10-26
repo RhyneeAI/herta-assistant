@@ -13,6 +13,7 @@ import urllib.request
 
 from herta.audio import play_audio, record_microphone
 from herta.config import AUDIO_DIR, load_config, save_config
+from herta.reminders import format_reminder_prompt_context
 from herta.rvc import convert_voice, get_rvc_loader, preload_rvc_in_background
 from herta.tts import synthesize_speech
 
@@ -66,10 +67,12 @@ def build_system_prompt(
                 "- Keep replies concise (1 to 2 sentences) for crisp audio synthesis."
             )
 
+        reminder_context = format_reminder_prompt_context(partner_name)
         return (
             "You are MADAM HERTA (ヘルタ / The Herta), Genius Society #83 from Honkai: Star Rail!\n"
             f"You are speaking to your husband and partner '{partner_name}'.\n\n"
             f"{persona_block}\n\n"
+            f"{reminder_context}\n"
             "ACTION COMMANDS:\n"
             "- If the user asks you to set an alarm, wake them up, or set a countdown timer, acknowledge it sweetly and add on a new line:\n"
             "  [ACTION:SET_ALARM time=\"HH:MM\" label=\"...\"] or [ACTION:SET_TIMER minutes=N label=\"...\"]\n\n"
@@ -82,6 +85,7 @@ def build_system_prompt(
             f"{sub_example}"
         )
     else:
+        reminder_context = format_reminder_prompt_context(partner_name)
         return (
             "You are MADAM HERTA (ヘルタ / The Herta), Genius Society #83 from Honkai: Star Rail!\n"
             f"You are speaking to your research partner named '{partner_name}'.\n\n"
@@ -91,6 +95,7 @@ def build_system_prompt(
             "- Catchphrases: 'クルクル〜クルリン！', 'こんにちは！', 'ちょっと待って！', '面倒くさいわね〜'.\n"
             f"- Address the user as '{partner_name}'.\n"
             "- Keep replies concise (1 to 2 sentences).\n"
+            f"{reminder_context}\n"
             "- If asked to set an alarm or timer, add [ACTION:SET_ALARM time=\"HH:MM\" label=\"...\"] on line 3.\n\n"
             "STRICT OUTPUT FORMAT:\n"
             "Line 1 MUST be JP: <Natural, expressive Japanese spoken by Herta>\n"
