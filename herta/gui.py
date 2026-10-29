@@ -155,6 +155,10 @@ class CompanionWorker(QThread):
     def run(self):
         while True:
             cfg = load_config()
+            if not cfg.get("companion_enabled", True):
+                time.sleep(10)
+                continue
+
             min_m = int(cfg.get("companion_min_minutes", 20))
             max_m = int(cfg.get("companion_max_minutes", 45))
             if min_m > max_m:
@@ -1164,7 +1168,14 @@ class HertaTrayApp(QSystemTrayIcon):
         self.connect_signals()
 
         self.show()
-        self.mascot.show()
+        cfg = load_config()
+        if cfg.get("mascot_visible", True):
+            self.mascot.show()
+            self.act_mascot.setText("👁️ Hide Desktop Mascot")
+        else:
+            self.mascot.hide()
+            self.act_mascot.setText("👁️ Show Desktop Mascot")
+
         self.companion_thread.start()
         self.alarm_thread.start()
 
@@ -1271,6 +1282,20 @@ class HertaTrayApp(QSystemTrayIcon):
         self.act_rvc.triggered.connect(self.toggle_rvc)
         self.menu.addAction(self.act_rvc)
 
+        # 7. Companion Check-in Toggle
+        self.act_companion = QAction("🤝 Proactive Companion Check-ins", self)
+        self.act_companion.setCheckable(True)
+        self.act_companion.setChecked(cfg.get("companion_enabled", True))
+        self.act_companion.triggered.connect(self.toggle_companion)
+        self.menu.addAction(self.act_companion)
+
+        # 8. Background Service Toggle
+        self.act_service = QAction("⚙️ Background Service (Sleep & Wallpaper)", self)
+        self.act_service.setCheckable(True)
+        self.act_service.setChecked(cfg.get("service_enabled", True))
+        self.act_service.triggered.connect(self.toggle_service)
+        self.menu.addAction(self.act_service)
+
         self.menu.addSeparator()
 
         # 7. Quit
@@ -1319,10 +1344,16 @@ class HertaTrayApp(QSystemTrayIcon):
     def show_mascot(self):
         self.mascot.show()
         self.act_mascot.setText("👁️ Hide Desktop Mascot")
+        cfg = load_config()
+        cfg["mascot_visible"] = True
+        save_config(cfg)
 
     def hide_mascot(self):
         self.mascot.hide()
         self.act_mascot.setText("👁️ Show Desktop Mascot")
+        cfg = load_config()
+        cfg["mascot_visible"] = False
+        save_config(cfg)
 
     def open_chat(self):
         self.chat_dialog.show()
@@ -1468,6 +1499,18 @@ class HertaTrayApp(QSystemTrayIcon):
         cfg = load_config()
         cfg["rvc_enabled"] = self.act_rvc.isChecked()
         save_config(cfg)
+
+    def toggle_companion(self):
+        cfg = load_config()
+        cfg["companion_enabled"] = self.act_companion.isChecked()
+        save_config(cfg)
+
+    def toggle_service(self):
+        from herta.service import start_service, stop_service
+        if self.act_service.isChecked():
+            start_service()
+        else:
+            stop_service()
 
     def quit_app(self):
         self.mascot.save_position()

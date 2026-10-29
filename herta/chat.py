@@ -437,11 +437,15 @@ def start_chat(fast_mode: bool = False):
 
         if user_text.lower() in ["rvc on", "voice rvc"]:
             rvc_active = True
+            cfg["rvc_enabled"] = True
+            save_config(cfg)
             get_rvc_loader()
             print("✨ Voice Mode: Yamazaki Haruka RVC v2 ACTIVE.\n")
             continue
         elif user_text.lower() in ["rvc off", "voice fast"]:
             rvc_active = False
+            cfg["rvc_enabled"] = False
+            save_config(cfg)
             print("⚡ Voice Mode: Fast TTS ACTIVE (No RVC).\n")
             continue
 

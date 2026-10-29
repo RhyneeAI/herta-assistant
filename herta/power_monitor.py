@@ -339,6 +339,10 @@ def run_windows_monitor():
 def run_monitor():
     """Run power event listener loop, companion check-in thread, and alarm scheduler."""
     cfg = load_config()
+    if not cfg.get("service_enabled", True):
+        print("Madam Herta background monitor is disabled in configuration.")
+        return
+
     min_m = int(cfg.get("companion_min_minutes", 20))
     max_m = int(cfg.get("companion_max_minutes", 45))
 

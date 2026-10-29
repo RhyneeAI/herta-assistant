@@ -9,9 +9,13 @@ import os
 import subprocess
 import sys
 
-from herta.config import IS_WINDOWS
+from herta.config import IS_WINDOWS, load_config, save_config
 
-LINUX_SERVICE = "herta-sleep-monitor.service"
+LINUX_SERVICES = [
+    "herta-sleep-monitor.service",
+    "herta-dynamic-wallpaper.service",
+]
+LINUX_SERVICE = LINUX_SERVICES[0]
 
 
 def is_service_running() -> bool:
@@ -32,6 +36,14 @@ def is_service_running() -> bool:
 
 def start_service() -> bool:
     """Start and enable background service."""
+    # Persist service_enabled flag in config
+    try:
+        cfg = load_config()
+        cfg["service_enabled"] = True
+        save_config(cfg)
+    except Exception:
+        pass
+
     if IS_WINDOWS:
         # Start background monitor via VBS launcher
         vbs_path = os.path.expanduser("~\\AppData\\Local\\HertaAssistant\\herta_monitor_background.vbs")
@@ -46,8 +58,9 @@ def start_service() -> bool:
             return False
     else:
         try:
-            subprocess.run(["systemctl", "--user", "enable", "--now", LINUX_SERVICE], check=True, capture_output=True)
-            print(f"🟢 Madam Herta Background Service ACTIVATED ({LINUX_SERVICE}).")
+            for s in LINUX_SERVICES:
+                subprocess.run(["systemctl", "--user", "enable", "--now", s], check=False, capture_output=True)
+            print(f"🟢 Madam Herta Background Services ACTIVATED ({', '.join(LINUX_SERVICES)}).")
             return True
         except Exception as exc:
             sys.stderr.write(f"Failed to start systemd service: {exc}\n")
@@ -56,6 +69,14 @@ def start_service() -> bool:
 
 def stop_service() -> bool:
     """Stop and disable background service."""
+    # Persist service_enabled flag in config
+    try:
+        cfg = load_config()
+        cfg["service_enabled"] = False
+        save_config(cfg)
+    except Exception:
+        pass
+
     if IS_WINDOWS:
         try:
             # Terminate running monitor instances
@@ -67,9 +88,10 @@ def stop_service() -> bool:
             return False
     else:
         try:
-            subprocess.run(["systemctl", "--user", "stop", LINUX_SERVICE], check=False, capture_output=True)
-            subprocess.run(["systemctl", "--user", "disable", LINUX_SERVICE], check=False, capture_output=True)
-            print(f"🔴 Madam Herta Background Service DEACTIVATED ({LINUX_SERVICE}).")
+            for s in LINUX_SERVICES:
+                subprocess.run(["systemctl", "--user", "stop", s], check=False, capture_output=True)
+                subprocess.run(["systemctl", "--user", "disable", s], check=False, capture_output=True)
+            print(f"🔴 Madam Herta Background Services DEACTIVATED ({', '.join(LINUX_SERVICES)}).")
             return True
         except Exception as exc:
             sys.stderr.write(f"Failed to stop systemd service: {exc}\n")

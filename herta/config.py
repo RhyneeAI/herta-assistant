@@ -56,7 +56,11 @@ DEFAULT_CONFIG = {
     "companion_max_minutes": 45,
     "telegram_bot_token": "",
     "telegram_chat_id": "",
-    "rvc_index_influence": 0.3
+    "rvc_index_influence": 0.3,
+    "service_enabled": True,
+    "mascot_visible": True,
+    "mascot_x": 0,
+    "mascot_y": 0
 }
 
 

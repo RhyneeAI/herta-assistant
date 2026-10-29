@@ -111,6 +111,8 @@ def main():
     config_parser.add_argument("--companion-max", type=int, help="Maximum companion interval in minutes")
     config_parser.add_argument("--telegram-token", type=str, help="Telegram Bot Token for phone notifications")
     config_parser.add_argument("--telegram-chat-id", type=str, help="Telegram Chat ID for phone notifications")
+    config_parser.add_argument("--service", choices=["on", "off"], help="Enable or disable background services")
+    config_parser.add_argument("--mascot", choices=["show", "hide"], help="Set mascot visibility preference: show or hide")
 
 
     args = parser.parse_args()
@@ -246,6 +248,15 @@ def main():
             changed = True
         if args.telegram_chat_id:
             cfg["telegram_chat_id"] = args.telegram_chat_id
+            changed = True
+        if args.service:
+            if args.service == "on":
+                start_service()
+            else:
+                stop_service()
+            cfg = load_config()
+        if args.mascot:
+            cfg["mascot_visible"] = (args.mascot == "show")
             changed = True
 
         if changed:
